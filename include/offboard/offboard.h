@@ -18,9 +18,12 @@ float target_pos[10][3];
 bool check_reached()
 {
 	bool reached;
-	if((std::floor(current_pose.pose.position.x) == target_pose.pose.position.x) 
-	     && (std::floor(current_pose.pose.position.y) ==  target_pose.pose.position.y) 
-		 && (std::floor(current_pose.pose.position.z) == target_pose.pose.position.z))
+	if(((target_pose.pose.position.x - 0.2) < current_pose.pose.position.x)
+	 && (current_pose.pose.position.x < (target_pose.pose.position.x + 0.2)) 
+	 && ((target_pose.pose.position.y - 0.2) < current_pose.pose.position.y)
+	 && (current_pose.pose.position.y < (target_pose.pose.position.y + 0.2))
+	 && ((target_pose.pose.position.z - 0.2) < current_pose.pose.position.z)
+	 && (current_pose.pose.position.z < (target_pose.pose.position.z + 0.2)))
 	{
 		reached = 1;
 	}

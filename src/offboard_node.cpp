@@ -16,15 +16,15 @@ int main(int argc, char **argv)
     ros::NodeHandle nh;
 
     ros::Subscriber state_sub = nh.subscribe<mavros_msgs::State>
-            ("mavros/state", 100, state_cb);
+            ("mavros/state", 10, state_cb);
     ros::Subscriber local_pose_sub = nh.subscribe<geometry_msgs::PoseStamped>
-            ("mavros/local_position/pose", 100, pose_cb);
+            ("mavros/local_position/pose", 10, pose_cb);
     
     ros::Publisher local_pos_pub = nh.advertise<geometry_msgs::PoseStamped>
-            ("mavros/setpoint_position/local", 100);
+            ("mavros/setpoint_position/local", 10);
 
     // the setpoint publishing rate MUST be faster than 2Hz
-    ros::Rate rate(20.0);
+    ros::Rate rate(100.0);
 
     // wait for FCU connection
     while(ros::ok() && current_state.connected)
@@ -36,7 +36,7 @@ int main(int argc, char **argv)
 	// check current state and position
 	for(int i = 10; ros::ok() && i > 0; --i)
 	{
-		ROS_INFO_STREAM("\nCurrent state: \n" << current_state);
+		// ROS_INFO_STREAM("\nCurrent state: \n" << current_state);
 		ROS_INFO_STREAM("\nCurrent pose: \n" << current_pose.pose.position);	
 		ros::spinOnce();
         rate.sleep();
@@ -59,7 +59,7 @@ int main(int argc, char **argv)
     while(ros::ok())
     {
 		ROS_INFO_STREAM("\nCurrent position: \n" << current_pose.pose.position);	
-	    ROS_INFO_STREAM("\nCurrent state: \n" << current_state);
+	    // ROS_INFO_STREAM("\nCurrent state: \n" << current_state);
 		ROS_INFO_STREAM("\nTarget position: \n" << target_pose.pose.position);
         
 		// publish target position
@@ -69,6 +69,8 @@ int main(int argc, char **argv)
             target_pose.pose.position.y = target_pos[i][1];
             target_pose.pose.position.z = target_pos[i][2];
             local_pos_pub.publish(target_pose);
+			ros::spinOnce();
+        	rate.sleep();
         }
         else
         {
@@ -76,20 +78,27 @@ int main(int argc, char **argv)
             target_pose.pose.position.y = target_pos[0][1];
             target_pose.pose.position.z = target_pos[0][2];
             local_pos_pub.publish(target_pose);
-            i = 0;
+	        // i = 0;
+			ros::spinOnce();
+        	rate.sleep();
         }
-		       
-		check_reached();
-		std::cout << check_reached() << std::endl;
-		if(check_reached)
+		
+		      
+		bool check = check_reached();
+		std::cout << check << std::endl;
+		if(check)
 		{
 			i = i + 1;
+			ros::spinOnce();
+		    rate.sleep();
 		}
 		else 
 		{
 			continue;
+			ros::spinOnce();
+		    rate.sleep();
 		}
-		
+
         ros::spinOnce();
         rate.sleep();
     }

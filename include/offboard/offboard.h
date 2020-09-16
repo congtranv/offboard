@@ -35,7 +35,7 @@ void input_target()
 {
 	std::cout << "Input target(s) position:" << std::endl;
 	std::cout << "Number of target(s): "; std::cin >> target_num;
-	for (int i=0, i < target_num, i++)
+	for (int i = 0; i < target_num; i++)
 	{
 		std::cout << "Target (" << i << "):" <<std::endl; 
 		std::cout << "x_" << i << ":"; std::cin >> target_pos[i][0];

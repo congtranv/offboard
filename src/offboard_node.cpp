@@ -63,7 +63,7 @@ int main(int argc, char **argv)
 		ROS_INFO_STREAM("\nTarget position: \n" << target_pose.pose.position);
         
 		// publish target position
-        if (i <= target_num)
+        if (i < target_num)
         {
             target_pose.pose.position.x = target_pos[i][0];
             target_pose.pose.position.y = target_pos[i][1];
@@ -86,7 +86,7 @@ int main(int argc, char **argv)
 		}
 		else 
 		{
-			std::continue;
+			continue;
 		}
 		
         ros::spinOnce();

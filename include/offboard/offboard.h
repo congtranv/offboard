@@ -5,32 +5,41 @@
 #include <iostream>
 #include <cmath>
 
-bool check_reached(float x, float y, float z);
-void input(float x, float y, float z);
+bool check_reached(void);
+void input_target(void);
 
 mavros_msgs::State current_state;
 geometry_msgs::PoseStamped current_pose;
 geometry_msgs::PoseStamped target_pose;
 
-bool check_reached(float x, float y, float z)
+int target_num;
+float target_pos[][3];
+
+bool check_reached()
 {
-	if((std::floor(x) == target_pose.pose.position.x) && (std::floor(y) ==  target_pose.pose.position.y) && (std::floor(z) == target_pose.pose.position.z))
+	bool reached;
+	if((std::floor(current_pose.pose.position.x) == target_pose.pose.position.x) 
+	     && (std::floor(current_pose.pose.position.y) ==  target_pose.pose.position.y) 
+		 && (std::floor(current_pose.pose.position.z) == target_pose.pose.position.z))
 	{
-		return 1;
+		reached = 1;
 	}
 	else
 	{
-		return 0;
+		reached = 0;
 	}
+	return reached;
 }
 
-void input(float x, float y, float z)
+void input_target()
 {
-	std::cout << "Inputing target ... " << std::endl;
-	// std::cout << "x: " << x; 
-	target_pose.pose.position.x = x;
-	// std::cout << "y: " << y; 
-	target_pose.pose.position.y = y;
-	// std::cout << "z: " << z; 
-	target_pose.pose.position.z = z;
+	std::cout << "Input target(s) position:" << std::endl;
+	std::cout << "Number of target(s): "; std::cin >> target_num;
+	for (int i=0, i < target_num, i++)
+	{
+		std::cout << "Target (" << i << "):" <<std::endl; 
+		std::cout << "x_" << i << ":"; std::cin >> target_pos[i][0];
+		std::cout << "y_" << i << ":"; std::cin >> target_pos[i][1];
+		std::cout << "z_" << i << ":"; std::cin >> target_pos[i][2];
+	}
 }

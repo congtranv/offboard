@@ -1,17 +1,14 @@
 #include "offboard/offboard.h"
 
-// mavros_msgs::State current_state;
+// state callback 
 void state_cb(const mavros_msgs::State::ConstPtr& msg){
     current_state = *msg;
 }
 
-// geometry_msgs::PoseStamped current_pose;
+// pose callback
 void pose_cb(const geometry_msgs::PoseStamped::ConstPtr& msg){
     current_pose = *msg;
 }
-
-// geometry_msgs::PoseStamped target_pose;
-// bool check_reached(float, float, float);
 
 int main(int argc, char **argv)
 {
@@ -45,12 +42,10 @@ int main(int argc, char **argv)
         rate.sleep();
     }
 
-	float x,y,z;
-	std::cout << "Input target: " << std::endl;
-	std::cout << "x: "; std::cin >> x;
-	std::cout << "y: "; std::cin >> y;
-	std::cout << "z: "; std::cin >> z;  
-	input(x, y, z); 
+	input_target();
+    target_pose.pose.position.x = target_pos[0][0];
+    target_pose.pose.position.y = target_pos[0][1];
+    target_pose.pose.position.z = target_pos[0][2];
 
     // send a few setpoints before starting
     for(int i = 10; ros::ok() && i > 0; --i){
@@ -60,7 +55,7 @@ int main(int argc, char **argv)
     }
     
     ros::Time last_request = ros::Time::now();
-
+    int i = 0;
     while(ros::ok())
     {
 		ROS_INFO_STREAM("\nCurrent position: \n" << current_pose.pose.position);	
@@ -68,20 +63,32 @@ int main(int argc, char **argv)
 		ROS_INFO_STREAM("\nTarget position: \n" << target_pose.pose.position);
         
 		// publish target position
-		local_pos_pub.publish(target_pose);
-        
-		/* 
-		check_reached(current_pose.pose.position.x, current_pose.pose.position.y, current_pose.pose.position.z);
+        if (i <= target_num)
+        {
+            target_pose.pose.position.x = target_pos[i][0];
+            target_pose.pose.position.y = target_pos[i][1];
+            target_pose.pose.position.z = target_pos[i][2];
+            local_pos_pub.publish(target_pose);
+        }
+        else
+        {
+            target_pose.pose.position.x = target_pos[0][0];
+            target_pose.pose.position.y = target_pos[0][1];
+            target_pose.pose.position.z = target_pos[0][2];
+            local_pos_pub.publish(target_pose);
+        }
+		       
+		check_reached();
 		std::cout << check_reached << std::endl;
-		if(!check_reached)
+		if(check_reached)
 		{
-			local_pos_pub.publish(target_pose);
+			i = i + 1;
 		}
 		else 
 		{
-			input(x+1, y, z);
+			std::continue;
 		}
-		*/
+		
         ros::spinOnce();
         rate.sleep();
     }

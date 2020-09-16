@@ -76,10 +76,11 @@ int main(int argc, char **argv)
             target_pose.pose.position.y = target_pos[0][1];
             target_pose.pose.position.z = target_pos[0][2];
             local_pos_pub.publish(target_pose);
+            i = 0;
         }
 		       
 		check_reached();
-		std::cout << check_reached << std::endl;
+		std::cout << check_reached() << std::endl;
 		if(check_reached)
 		{
 			i = i + 1;
@@ -93,6 +94,5 @@ int main(int argc, char **argv)
         rate.sleep();
     }
 	
-	// ROS_INFO("\nwhile break\n");
     return 0;
 }

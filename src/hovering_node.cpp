@@ -46,9 +46,6 @@ int main(int argc, char **argv)
     }
 
     geometry_msgs::PoseStamped target_pose;
-//    target_pose.pose.position.x = 0;
-//    target_pose.pose.position.y = 0;
-//    target_pose.pose.position.z = 2;
 
 	std::cout << "Input target: " << std::endl;
 	std::cout << "x: "; std::cin >> target_pose.pose.position.x;

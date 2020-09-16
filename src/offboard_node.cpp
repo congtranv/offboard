@@ -1,17 +1,14 @@
 #include "offboard/offboard.h"
 
-// mavros_msgs::State current_state;
+// state callback 
 void state_cb(const mavros_msgs::State::ConstPtr& msg){
     current_state = *msg;
 }
 
-// geometry_msgs::PoseStamped current_pose;
+// pose callback
 void pose_cb(const geometry_msgs::PoseStamped::ConstPtr& msg){
     current_pose = *msg;
 }
-
-// geometry_msgs::PoseStamped target_pose;
-// bool check_reached(float, float, float);
 
 int main(int argc, char **argv)
 {
@@ -19,15 +16,15 @@ int main(int argc, char **argv)
     ros::NodeHandle nh;
 
     ros::Subscriber state_sub = nh.subscribe<mavros_msgs::State>
-            ("mavros/state", 100, state_cb);
+            ("mavros/state", 10, state_cb);
     ros::Subscriber local_pose_sub = nh.subscribe<geometry_msgs::PoseStamped>
-            ("mavros/local_position/pose", 100, pose_cb);
+            ("mavros/local_position/pose", 10, pose_cb);
     
     ros::Publisher local_pos_pub = nh.advertise<geometry_msgs::PoseStamped>
-            ("mavros/setpoint_position/local", 100);
+            ("mavros/setpoint_position/local", 10);
 
     // the setpoint publishing rate MUST be faster than 2Hz
-    ros::Rate rate(20.0);
+    ros::Rate rate(100.0);
 
     // wait for FCU connection
     while(ros::ok() && current_state.connected)
@@ -39,18 +36,16 @@ int main(int argc, char **argv)
 	// check current state and position
 	for(int i = 10; ros::ok() && i > 0; --i)
 	{
-		ROS_INFO_STREAM("\nCurrent state: \n" << current_state);
+		// ROS_INFO_STREAM("\nCurrent state: \n" << current_state);
 		ROS_INFO_STREAM("\nCurrent pose: \n" << current_pose.pose.position);	
 		ros::spinOnce();
         rate.sleep();
     }
 
-	float x,y,z;
-	std::cout << "Input target: " << std::endl;
-	std::cout << "x: "; std::cin >> x;
-	std::cout << "y: "; std::cin >> y;
-	std::cout << "z: "; std::cin >> z;  
-	input(x, y, z); 
+	input_target();
+    target_pose.pose.position.x = target_pos[0][0];
+    target_pose.pose.position.y = target_pos[0][1];
+    target_pose.pose.position.z = target_pos[0][2];
 
     // send a few setpoints before starting
     for(int i = 10; ros::ok() && i > 0; --i){
@@ -60,32 +55,53 @@ int main(int argc, char **argv)
     }
     
     ros::Time last_request = ros::Time::now();
-
+    int i = 0;
     while(ros::ok())
     {
 		ROS_INFO_STREAM("\nCurrent position: \n" << current_pose.pose.position);	
-	    ROS_INFO_STREAM("\nCurrent state: \n" << current_state);
+	    // ROS_INFO_STREAM("\nCurrent state: \n" << current_state);
 		ROS_INFO_STREAM("\nTarget position: \n" << target_pose.pose.position);
         
 		// publish target position
-		local_pos_pub.publish(target_pose);
-        
-		/* 
-		check_reached(current_pose.pose.position.x, current_pose.pose.position.y, current_pose.pose.position.z);
-		std::cout << check_reached << std::endl;
-		if(!check_reached)
+        if (i < target_num)
+        {
+            target_pose.pose.position.x = target_pos[i][0];
+            target_pose.pose.position.y = target_pos[i][1];
+            target_pose.pose.position.z = target_pos[i][2];
+            local_pos_pub.publish(target_pose);
+			ros::spinOnce();
+        	rate.sleep();
+        }
+        else
+        {
+            target_pose.pose.position.x = target_pos[0][0];
+            target_pose.pose.position.y = target_pos[0][1];
+            target_pose.pose.position.z = target_pos[0][2];
+            local_pos_pub.publish(target_pose);
+	        // i = 0;
+			ros::spinOnce();
+        	rate.sleep();
+        }
+		
+		      
+		bool check = check_reached();
+		std::cout << check << std::endl;
+		if(check)
 		{
-			local_pos_pub.publish(target_pose);
+			i = i + 1;
+			ros::spinOnce();
+		    rate.sleep();
 		}
 		else 
 		{
-			input(x+1, y, z);
+			continue;
+			ros::spinOnce();
+		    rate.sleep();
 		}
-		*/
+
         ros::spinOnce();
         rate.sleep();
     }
 	
-	// ROS_INFO("\nwhile break\n");
     return 0;
 }

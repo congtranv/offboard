@@ -13,7 +13,7 @@ geometry_msgs::PoseStamped current_pose;
 geometry_msgs::PoseStamped target_pose;
 
 int target_num;
-float target_pos[][3];
+float target_pos[10][3];
 
 bool check_reached()
 {

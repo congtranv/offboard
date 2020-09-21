@@ -13,6 +13,7 @@ find_package(catkin REQUIRED COMPONENTS
   roscpp
   rospy
   std_msgs
+  roslaunch
 )
 
 catkin_package(
@@ -32,6 +33,8 @@ include_directories(
   include
   ${catkin_INCLUDE_DIRS}
 )
+
+roslaunch_add_file_check(launch)
 
 add_executable(hovering src/hovering_node.cpp)
 add_executable(offboard src/offboard_node.cpp)

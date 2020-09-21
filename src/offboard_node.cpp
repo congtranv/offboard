@@ -24,7 +24,7 @@ int main(int argc, char **argv)
             ("mavros/setpoint_position/local", 10);
 
     // the setpoint publishing rate MUST be faster than 2Hz
-    ros::Rate rate(100.0);
+    ros::Rate rate(20.0);
 
     // wait for FCU connection
     while(ros::ok() && current_state.connected)
@@ -37,7 +37,7 @@ int main(int argc, char **argv)
 	for(int i = 10; ros::ok() && i > 0; --i)
 	{
 		// ROS_INFO_STREAM("\nCurrent state: \n" << current_state);
-		ROS_INFO_STREAM("\nCurrent pose: \n" << current_pose.pose.position);	
+		ROS_INFO_STREAM("\nCurrent pose: \n" << current_pose.pose);	
 		ros::spinOnce();
         rate.sleep();
     }
@@ -47,6 +47,11 @@ int main(int argc, char **argv)
     target_pose.pose.position.y = target_pos[0][1];
     target_pose.pose.position.z = target_pos[0][2];
 
+    target_pose.pose.orientation.x = target_pos[0][3];
+    target_pose.pose.orientation.y = target_pos[0][4];
+    target_pose.pose.orientation.z = target_pos[0][5];
+    target_pose.pose.orientation.w = target_pos[0][6];
+
     // send a few setpoints before starting
     for(int i = 10; ros::ok() && i > 0; --i){
         local_pos_pub.publish(target_pose);
@@ -54,12 +59,11 @@ int main(int argc, char **argv)
         rate.sleep();
     }
     
-    ros::Time last_request = ros::Time::now();
+    // ros::Time last_request = ros::Time::now();
     int i = 0;
     while(ros::ok())
     {
 		ROS_INFO_STREAM("\nCurrent position: \n" << current_pose.pose.position);	
-	    // ROS_INFO_STREAM("\nCurrent state: \n" << current_state);
 		ROS_INFO_STREAM("\nTarget position: \n" << target_pose.pose.position);
         
 		// publish target position
@@ -68,15 +72,38 @@ int main(int argc, char **argv)
             target_pose.pose.position.x = target_pos[i][0];
             target_pose.pose.position.y = target_pos[i][1];
             target_pose.pose.position.z = target_pos[i][2];
+
+            target_pose.pose.orientation.x = target_pos[i][3];
+            target_pose.pose.orientation.y = target_pos[i][4];
+            target_pose.pose.orientation.z = target_pos[i][5];
+            target_pose.pose.orientation.w = target_pos[i][6];
+
             local_pos_pub.publish(target_pose);
 			ros::spinOnce();
         	rate.sleep();
         }
         else
         {
-            target_pose.pose.position.x = target_pos[0][0];
-            target_pose.pose.position.y = target_pos[0][1];
-            target_pose.pose.position.z = target_pos[0][2];
+            // return first target
+            // target_pose.pose.position.x = target_pos[0][0];
+            // target_pose.pose.position.y = target_pos[0][1];
+            // target_pose.pose.position.z = target_pos[0][2];
+
+            // target_pose.pose.orientation.x = target_pos[0][3];
+            // target_pose.pose.orientation.y = target_pos[0][4];
+            // target_pose.pose.orientation.z = target_pos[0][5];
+            // target_pose.pose.orientation.w = target_pos[0][6];
+            
+            // keep final target
+            target_pose.pose.position.x = target_pos[target_num - 1][0];
+            target_pose.pose.position.y = target_pos[target_num - 1][1];
+            target_pose.pose.position.z = target_pos[target_num - 1][2];
+
+            target_pose.pose.orientation.x = target_pos[target_num - 1][3];
+            target_pose.pose.orientation.y = target_pos[target_num - 1][4];
+            target_pose.pose.orientation.z = target_pos[target_num - 1][5];
+            target_pose.pose.orientation.w = target_pos[target_num - 1][6];
+
             local_pos_pub.publish(target_pose);
 	        // i = 0;
 			ros::spinOnce();
@@ -84,7 +111,7 @@ int main(int argc, char **argv)
         }
 		
 		      
-		bool check = check_reached();
+		bool check = check_position() & check_orientation();
 		std::cout << check << std::endl;
 		if(check)
 		{

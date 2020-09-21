@@ -111,7 +111,7 @@ int main(int argc, char **argv)
         }
 		
 		      
-		bool check = check_position() & check_orientation();
+		bool check = check_position() && check_orientation();
 		std::cout << check << std::endl;
 		if(check)
 		{

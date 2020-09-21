@@ -40,13 +40,13 @@ bool check_orientation()
 {
 	bool reached;
 	if(((target_pose.pose.orientation.x - 0.01) < current_pose.pose.orientation.x)
-	 && (current_pose.pose.orientation.x < (target_pose.pose.orientation.x + 0.1)) 
-	 && ((target_pose.pose.orientation.y - 0.1) < current_pose.pose.orientation.y)
-	 && (current_pose.pose.orientation.y < (target_pose.pose.orientation.y + 0.1))
-	 && ((target_pose.pose.orientation.z - 0.1) < current_pose.pose.orientation.z)
-	 && (current_pose.pose.orientation.z < (target_pose.pose.orientation.z + 0.1))
-	 && ((target_pose.pose.orientation.w - 0.1) < current_pose.pose.orientation.w)
-	 && (current_pose.pose.orientation.w < (target_pose.pose.orientation.w + 0.1)))
+	 && (current_pose.pose.orientation.x < (target_pose.pose.orientation.x + 0.01)) 
+	 && ((target_pose.pose.orientation.y - 0.01) < current_pose.pose.orientation.y)
+	 && (current_pose.pose.orientation.y < (target_pose.pose.orientation.y + 0.01))
+	 && ((target_pose.pose.orientation.z - 0.01) < current_pose.pose.orientation.z)
+	 && (current_pose.pose.orientation.z < (target_pose.pose.orientation.z + 0.01))
+	 && ((target_pose.pose.orientation.w - 0.01) < current_pose.pose.orientation.w)
+	 && (current_pose.pose.orientation.w < (target_pose.pose.orientation.w + 0.01)))
 	{
 		reached = 1;
 	}

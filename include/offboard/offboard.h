@@ -15,6 +15,7 @@ geometry_msgs::PoseStamped current_pose;
 geometry_msgs::PoseStamped target_pose;
 
 int target_num;
+// float target_pos[10][3];
 float target_pos[10][7];
 
 bool check_position()
@@ -36,17 +37,21 @@ bool check_position()
 	return reached;
 }
 
+
 bool check_orientation()
 {
 	bool reached;
-	if(((target_pose.pose.orientation.x - 0.01) < current_pose.pose.orientation.x)
-	 && (current_pose.pose.orientation.x < (target_pose.pose.orientation.x + 0.01)) 
-	 && ((target_pose.pose.orientation.y - 0.01) < current_pose.pose.orientation.y)
-	 && (current_pose.pose.orientation.y < (target_pose.pose.orientation.y + 0.01))
-	 && ((target_pose.pose.orientation.z - 0.01) < current_pose.pose.orientation.z)
-	 && (current_pose.pose.orientation.z < (target_pose.pose.orientation.z + 0.01))
-	 && ((target_pose.pose.orientation.w - 0.01) < current_pose.pose.orientation.w)
-	 && (current_pose.pose.orientation.w < (target_pose.pose.orientation.w + 0.01)))
+		
+	if(((target_pose.pose.orientation.x - 0.1) < current_pose.pose.orientation.x)
+	 && (current_pose.pose.orientation.x < (target_pose.pose.orientation.x + 0.1)) 
+	 && ((target_pose.pose.orientation.y - 0.1) < current_pose.pose.orientation.y)
+	 && (current_pose.pose.orientation.y < (target_pose.pose.orientation.y + 0.1))
+	 && ((target_pose.pose.orientation.z - 0.1) < current_pose.pose.orientation.z)
+	 && (current_pose.pose.orientation.z < (target_pose.pose.orientation.z + 0.1))
+	 && ((target_pose.pose.orientation.w - 0.1) < current_pose.pose.orientation.w)
+	 && (current_pose.pose.orientation.w < (target_pose.pose.orientation.w + 0.1)))
+	
+	/* if((current_pose.pose.orientation.x == target_pose.pose.orientation.x)&&(current_pose.pose.orientation.y == target_pose.pose.orientation.y)&&(current_pose.pose.orientation.z == target_pose.pose.orientation.z)&&(current_pose.pose.orientation.w == target_pose.pose.orientation.w)) */
 	{
 		reached = 1;
 	}
@@ -57,6 +62,7 @@ bool check_orientation()
 	return reached;
 }
 
+
 void input_target()
 {
 	std::cout << "Input target(s) position:" << std::endl;
@@ -64,13 +70,14 @@ void input_target()
 	for (int i = 0; i < target_num; i++)
 	{
 		std::cout << "Target (" << i+1 << ") position:" <<std::endl; 
-		std::cout << "x_p" << i+1 << ":"; std::cin >> target_pos[i][0];
-		std::cout << "y_p" << i+1 << ":"; std::cin >> target_pos[i][1];
-		std::cout << "z_p" << i+1 << ":"; std::cin >> target_pos[i][2];
+		std::cout << "pos_x_" << i+1 << ":"; std::cin >> target_pos[i][0];
+		std::cout << "pos_y_" << i+1 << ":"; std::cin >> target_pos[i][1];
+		std::cout << "pos_z_" << i+1 << ":"; std::cin >> target_pos[i][2];
+		
 		std::cout << "Target (" << i+1 << ") orientation:" <<std::endl; 
-		std::cout << "x_o" << i+1 << ":"; std::cin >> target_pos[i][3];
-		std::cout << "y_o" << i+1 << ":"; std::cin >> target_pos[i][4];
-		std::cout << "z_o" << i+1 << ":"; std::cin >> target_pos[i][5];
-		std::cout << "w_o" << i+1 << ":"; std::cin >> target_pos[i][6];
+		std::cout << "ort_x_" << i+1 << ":"; std::cin >> target_pos[i][3];
+		std::cout << "ort_y_" << i+1 << ":"; std::cin >> target_pos[i][4];
+		std::cout << "ort_z_" << i+1 << ":"; std::cin >> target_pos[i][5];
+		std::cout << "ort_w_" << i+1 << ":"; std::cin >> target_pos[i][6];
 	}
 }

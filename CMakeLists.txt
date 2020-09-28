@@ -37,11 +37,16 @@ include_directories(
 roslaunch_add_file_check(launch)
 
 add_executable(hovering src/hovering_node.cpp)
-add_executable(offboard src/offboard_node.cpp)
-
 target_link_libraries(hovering
   ${catkin_LIBRARIES}
 )
+
+add_executable(offboard src/offboard_node.cpp)
 target_link_libraries(offboard
+  ${catkin_LIBRARIES}
+)
+
+add_executable(gps_offb src/gps_offb.cpp)
+target_link_libraries(gps_offb
   ${catkin_LIBRARIES}
 )

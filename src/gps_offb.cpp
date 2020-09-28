@@ -88,7 +88,9 @@ int main(int argc, char **argv) {
     }
 
     // take off to 5m above ground
-    goal_position.altitude = goal_position.altitude + 5.0;
+    goal_position.altitude = goal_position.altitude + 2.0;
+    goal_position.latitude = goal_position.latitude + 0.00001;
+    goal_position.longitude = goal_position.longitude + 0.00001;
     while (ros::ok()) {
         goal_position.header.stamp = ros::Time::now();
         goal_pos_pub.publish(goal_position);

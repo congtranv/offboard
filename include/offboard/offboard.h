@@ -1,7 +1,17 @@
 #include <ros/ros.h>
 #include <geometry_msgs/PoseStamped.h>
+#include <geographic_msgs/GeoPoseStamped.h>
 #include <mavros_msgs/State.h>
 #include <tf/tf.h>
+#include <tf/transform_datatypes.h>
+
+#include <mavros_msgs/CommandBool.h>
+#include <mavros_msgs/SetMode.h>
+#include <mavros_msgs/GlobalPositionTarget.h>
+#include <sensor_msgs/NavSatFix.h>
+#include <tf2_geometry_msgs/tf2_geometry_msgs.h>
+#include <tf2/LinearMath/Quaternion.h>
+#include <tf2/convert.h>
 
 #include <iostream>
 #include <cmath>
@@ -9,14 +19,22 @@
 bool check_position(void);
 bool check_orientation(void);
 void input_target(void);
+double degree(double);
+double radian(double);
 
 mavros_msgs::State current_state;
 geometry_msgs::PoseStamped current_pose;
 geometry_msgs::PoseStamped target_pose;
 
+sensor_msgs::NavSatFix global_position;
+bool global_position_received = false;
+
 int target_num;
 // float target_pos[10][3];
 float target_pos[10][7];
+tf::Quaternion q;
+double roll, pitch, yaw;
+double r, p, y;
 
 bool check_position()
 {
@@ -74,10 +92,26 @@ void input_target()
 		std::cout << "pos_y_" << i+1 << ":"; std::cin >> target_pos[i][1];
 		std::cout << "pos_z_" << i+1 << ":"; std::cin >> target_pos[i][2];
 		
-		std::cout << "Target (" << i+1 << ") orientation:" <<std::endl; 
-		std::cout << "ort_x_" << i+1 << ":"; std::cin >> target_pos[i][3];
-		std::cout << "ort_y_" << i+1 << ":"; std::cin >> target_pos[i][4];
-		std::cout << "ort_z_" << i+1 << ":"; std::cin >> target_pos[i][5];
-		std::cout << "ort_w_" << i+1 << ":"; std::cin >> target_pos[i][6];
+		// std::cout << "Target (" << i+1 << ") orientation:" <<std::endl; 
+		// std::cout << "ort_x_" << i+1 << ":"; std::cin >> target_pos[i][3];
+		// std::cout << "ort_y_" << i+1 << ":"; std::cin >> target_pos[i][4];
+		// std::cout << "ort_z_" << i+1 << ":"; std::cin >> target_pos[i][5];
+		// std::cout << "ort_w_" << i+1 << ":"; std::cin >> target_pos[i][6];
+		std::cout << "Target (" << i+1 << ") orientation (degree):" <<std::endl; 
+		std::cout << "roll_" << i+1 << ":"; std::cin >> target_pos[i][3];
+		std::cout << "pitch_" << i+1 << ":"; std::cin >> target_pos[i][4];
+		std::cout << "yaw_" << i+1 << ":"; std::cin >> target_pos[i][5];
 	}
+}
+
+double degree(double rad)
+{
+	double radian_to_degree = (rad*180)/3.14;
+	return radian_to_degree;
+}
+
+double radian(double deg)
+{
+	double degree_to_radian = (deg*3.14)/180;
+	return degree_to_radian;
 }

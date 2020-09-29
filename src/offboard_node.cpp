@@ -46,13 +46,12 @@ int main(int argc, char **argv)
 			current_pose.pose.orientation.z,
 			current_pose.pose.orientation.w);
 		tf::Matrix3x3 mc(qc);
-		double roll, pitch, yaw;
-		mc.getRPY(roll, pitch, yaw);
+		mc.getRPY(r, p, y);
 
 		// print roll, pitch, yaw
-		std::cout << "Roll : " << roll << std::endl;
-		std::cout << "Pitch: " << pitch << std::endl;
-		std::cout << "Yaw  : " << yaw << std::endl;		
+		std::cout << "Roll : " << degree(r) << std::endl;
+		std::cout << "Pitch: " << degree(p) << std::endl;
+		std::cout << "Yaw  : " << degree(y) << std::endl;		
 	
 		ros::spinOnce();
         rate.sleep();
@@ -63,11 +62,18 @@ int main(int argc, char **argv)
     target_pose.pose.position.y = target_pos[0][1];
     target_pose.pose.position.z = target_pos[0][2];
 	
-    target_pose.pose.orientation.x = target_pos[0][3];
-    target_pose.pose.orientation.y = target_pos[0][4];
-    target_pose.pose.orientation.z = target_pos[0][5];
-    target_pose.pose.orientation.w = target_pos[0][6];
-	
+    // target_pose.pose.orientation.x = target_pos[0][3];
+    // target_pose.pose.orientation.y = target_pos[0][4];
+    // target_pose.pose.orientation.z = target_pos[0][5];
+    // target_pose.pose.orientation.w = target_pos[0][6];
+
+    roll  = radian(target_pos[0][3]);
+    pitch = radian(target_pos[0][4]);
+    yaw   = radian(target_pos[0][5]);
+
+    q.setRPY(roll, pitch, yaw);
+	tf::quaternionTFToMsg(q, target_pose.pose.orientation);
+
 
     // send a few setpoints before starting
     for(int i = 10; ros::ok() && i > 0; --i){
@@ -76,12 +82,11 @@ int main(int argc, char **argv)
         rate.sleep();
     }
     
-    // ros::Time last_request = ros::Time::now();
     int i = 0;
     while(ros::ok())
     {
 		ROS_INFO_STREAM("\nCurrent position: \n" << current_pose.pose);	
-		ROS_INFO_STREAM("\nTarget position: \n" << target_pose.pose);
+		// ROS_INFO_STREAM("\nTarget position: \n" << target_pose.pose);
 
 		// tf Quaternion to RPY
 		tf::Quaternion qc(
@@ -90,13 +95,12 @@ int main(int argc, char **argv)
 			current_pose.pose.orientation.z,
 			current_pose.pose.orientation.w);
 		tf::Matrix3x3 mc(qc);
-		double roll, pitch, yaw;
-		mc.getRPY(roll, pitch, yaw);
+		mc.getRPY(r, p, y);
 
 		// print roll, pitch, yaw
-		std::cout << "Roll : " << roll << std::endl;
-		std::cout << "Pitch: " << pitch << std::endl;
-		std::cout << "Yaw  : " << yaw << std::endl;
+		std::cout << "Roll : " << degree(r) << std::endl;
+		std::cout << "Pitch: " << degree(p) << std::endl;
+		std::cout << "Yaw  : " << degree(y) << std::endl;
         
 		// publish target position
         if (i < target_num)
@@ -105,11 +109,17 @@ int main(int argc, char **argv)
             target_pose.pose.position.y = target_pos[i][1];
             target_pose.pose.position.z = target_pos[i][2];
 			
-            target_pose.pose.orientation.x = target_pos[i][3];
-            target_pose.pose.orientation.y = target_pos[i][4];
-            target_pose.pose.orientation.z = target_pos[i][5];
-            target_pose.pose.orientation.w = target_pos[i][6];
+            // target_pose.pose.orientation.x = target_pos[i][3];
+            // target_pose.pose.orientation.y = target_pos[i][4];
+            // target_pose.pose.orientation.z = target_pos[i][5];
+            // target_pose.pose.orientation.w = target_pos[i][6];
 			
+            roll  = radian(target_pos[i][3]);
+            pitch = radian(target_pos[i][4]);
+            yaw   = radian(target_pos[i][5]);
+
+            q.setRPY(roll, pitch, yaw);
+	        tf::quaternionTFToMsg(q, target_pose.pose.orientation);
 
             local_pos_pub.publish(target_pose);
 			ros::spinOnce();
@@ -132,11 +142,17 @@ int main(int argc, char **argv)
             target_pose.pose.position.y = target_pos[target_num - 1][1];
             target_pose.pose.position.z = target_pos[target_num - 1][2];
 			
-            target_pose.pose.orientation.x = target_pos[target_num - 1][3];
-            target_pose.pose.orientation.y = target_pos[target_num - 1][4];
-            target_pose.pose.orientation.z = target_pos[target_num - 1][5];
-            target_pose.pose.orientation.w = target_pos[target_num - 1][6];
+            // target_pose.pose.orientation.x = target_pos[target_num - 1][3];
+            // target_pose.pose.orientation.y = target_pos[target_num - 1][4];
+            // target_pose.pose.orientation.z = target_pos[target_num - 1][5];
+            // target_pose.pose.orientation.w = target_pos[target_num - 1][6];
 			
+            roll  = radian(target_pos[target_num - 1][3]);
+            pitch = radian(target_pos[target_num - 1][4]);
+            yaw   = radian(target_pos[target_num - 1][5]);
+
+            q.setRPY(roll, pitch, yaw);
+	        tf::quaternionTFToMsg(q, target_pose.pose.orientation);
 
             local_pos_pub.publish(target_pose);
 	        // i = 0;

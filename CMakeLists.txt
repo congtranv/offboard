@@ -50,3 +50,8 @@ add_executable(gps_offb src/gps_offb.cpp)
 target_link_libraries(gps_offb
   ${catkin_LIBRARIES}
 )
+
+add_executable(setmode_offb src/setmode_offb.cpp)
+target_link_libraries(setmode_offb
+  ${catkin_LIBRARIES}
+)

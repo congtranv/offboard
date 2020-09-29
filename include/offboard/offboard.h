@@ -4,6 +4,11 @@
 #include <mavros_msgs/State.h>
 #include <tf/tf.h>
 
+#include <mavros_msgs/CommandBool.h>
+#include <mavros_msgs/SetMode.h>
+#include <mavros_msgs/GlobalPositionTarget.h>
+#include <sensor_msgs/NavSatFix.h>
+
 #include <iostream>
 #include <cmath>
 
@@ -14,6 +19,9 @@ void input_target(void);
 mavros_msgs::State current_state;
 geometry_msgs::PoseStamped current_pose;
 geometry_msgs::PoseStamped target_pose;
+
+sensor_msgs::NavSatFix global_position;
+bool global_position_received = false;
 
 int target_num;
 // float target_pos[10][3];

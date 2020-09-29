@@ -1,16 +1,4 @@
-#include <ros/ros.h>
-#include <geometry_msgs/PoseStamped.h>
-#include <geographic_msgs/GeoPoseStamped.h>
-#include <mavros_msgs/State.h>
-#include <mavros_msgs/CommandBool.h>
-#include <mavros_msgs/SetMode.h>
-#include <mavros_msgs/GlobalPositionTarget.h>
-#include <sensor_msgs/NavSatFix.h>
-
-// global variables
-mavros_msgs::State current_state;
-sensor_msgs::NavSatFix global_position;
-bool global_position_received = false;
+#include "offboard/offboard.h"
 
 // callback functions
 void globalPosition_cb(const sensor_msgs::NavSatFix::ConstPtr& msg) {
@@ -28,8 +16,8 @@ int main(int argc, char **argv) {
     ros::init(argc, argv, "gps_offb");
     ros::NodeHandle nh;
 
-    ros::ServiceClient arming_client = nh.serviceClient < mavros_msgs::CommandBool > ("mavros/cmd/arming");
-    ros::ServiceClient set_mode_client = nh.serviceClient < mavros_msgs::SetMode > ("mavros/set_mode");
+    // ros::ServiceClient arming_client = nh.serviceClient < mavros_msgs::CommandBool > ("mavros/cmd/arming");
+    // ros::ServiceClient set_mode_client = nh.serviceClient < mavros_msgs::SetMode > ("mavros/set_mode");
     
     ros::Subscriber state_sub = nh.subscribe < mavros_msgs::State > ("mavros/state", 10, state_cb);
     ros::Subscriber global_pos_sub = nh.subscribe < sensor_msgs::NavSatFix > ("mavros/global_position/global", 1, globalPosition_cb);
@@ -69,23 +57,23 @@ int main(int argc, char **argv) {
     }
 
     // set mode
-    mavros_msgs::SetMode offb_set_mode;
-    offb_set_mode.request.base_mode = 0;
-    offb_set_mode.request.custom_mode = "OFFBOARD";
-    if (set_mode_client.call(offb_set_mode) && offb_set_mode.response.mode_sent) {
-        ROS_INFO("OFFBOARD enabled");
-    } else {
-        ROS_ERROR("Failed to set OFFBOARD");
-    }
+    // mavros_msgs::SetMode offb_set_mode;
+    // offb_set_mode.request.base_mode = 0;
+    // offb_set_mode.request.custom_mode = "OFFBOARD";
+    // if (set_mode_client.call(offb_set_mode) && offb_set_mode.response.mode_sent) {
+    //     ROS_INFO("OFFBOARD enabled");
+    // } else {
+    //     ROS_ERROR("Failed to set OFFBOARD");
+    // }
 
     // arm
-    mavros_msgs::CommandBool arm_cmd;
-    arm_cmd.request.value = true;
-    if (arming_client.call(arm_cmd) && arm_cmd.response.success) {
-        ROS_INFO("Vehicle armed");
-    } else {
-        ROS_ERROR("Arming failed");
-    }
+    // mavros_msgs::CommandBool arm_cmd;
+    // arm_cmd.request.value = true;
+    // if (arming_client.call(arm_cmd) && arm_cmd.response.success) {
+    //     ROS_INFO("Vehicle armed");
+    // } else {
+    //     ROS_ERROR("Arming failed");
+    // }
 
     // take off to 5m above ground
     goal_position.altitude = goal_position.altitude + 2.0;

@@ -12,6 +12,7 @@
                 "/home/congtranv/ros/catkin_ws/src/mavros/mavros/include/**",
                 "/home/congtranv/ros/catkin_ws/src/mavros/mavros_msgs/include/**",
                 "/home/congtranv/ros/catkin_ws/src/offboard/include/**",
+                "/home/ivsr/ROS/catkin_ws/src/offboard/include/**",
                 "/home/congtranv/ros/catkin_ws/src/mavros/test_mavros/include/**",
                 "/usr/include/**",
                 "/home/congtranv/ros/catkin_ws/devel/.private/mavros_msgs/include",

@@ -1,8 +1,8 @@
 #include "offboard/offboard.h"
 
-void state_cb(const mavros_msgs::State::ConstPtr& msg) {
-    current_state = *msg;
-}
+// void state_cb(const mavros_msgs::State::ConstPtr& msg) {
+//     current_state = *msg;
+// }
 
 int main(int argc, char **argv) {
     ros::init(argc, argv, "setmode_offb");
@@ -11,17 +11,9 @@ int main(int argc, char **argv) {
     ros::ServiceClient arming_client = nh.serviceClient < mavros_msgs::CommandBool > ("mavros/cmd/arming");
     ros::ServiceClient set_mode_client = nh.serviceClient < mavros_msgs::SetMode > ("mavros/set_mode");
     
-    ros::Subscriber state_sub = nh.subscribe < mavros_msgs::State > ("mavros/state", 10, state_cb);
+    // ros::Subscriber state_sub = nh.subscribe < mavros_msgs::State > ("mavros/state", 10, state_cb);
     
-    ros::Rate rate(10);
-
-    // wait for fcu connection
-    while (ros::ok() && !current_state.connected) {
-        ROS_INFO_ONCE("Waiting for FCU connection...");
-        ros::spinOnce();
-        rate.sleep();
-    }
-    ROS_INFO("FCU connected");
+    ros::Rate rate(20.0);
 
     // set mode
     mavros_msgs::SetMode offb_set_mode;

@@ -42,11 +42,11 @@ bool check_position()
 {
 	bool reached;
 	if(((target_pose.pose.position.x - 0.1) < current_pose.pose.position.x)
-	 && (current_pose.pose.position.x < (target_pose.pose.position.x + 0.1)) 
-	 && ((target_pose.pose.position.y - 0.1) < current_pose.pose.position.y)
-	 && (current_pose.pose.position.y < (target_pose.pose.position.y + 0.1))
-	 && ((target_pose.pose.position.z - 0.1) < current_pose.pose.position.z)
-	 && (current_pose.pose.position.z < (target_pose.pose.position.z + 0.1)))
+	&& (current_pose.pose.position.x < (target_pose.pose.position.x + 0.1)) 
+	&& ((target_pose.pose.position.y - 0.1) < current_pose.pose.position.y)
+	&& (current_pose.pose.position.y < (target_pose.pose.position.y + 0.1))
+	&& ((target_pose.pose.position.z - 0.1) < current_pose.pose.position.z)
+	&& (current_pose.pose.position.z < (target_pose.pose.position.z + 0.1)))
 	{
 		reached = 1;
 	}
@@ -121,8 +121,10 @@ void input_target()
 		// std::cout << "ort_z_" << i+1 << ":"; std::cin >> target_pos[i][5];
 		// std::cout << "ort_w_" << i+1 << ":"; std::cin >> target_pos[i][6];
 		std::cout << "Target (" << i+1 << ") orientation (degree):" <<std::endl; 
-		std::cout << "roll_" << i+1 << ":"; std::cin >> target_pos[i][3];
-		std::cout << "pitch_" << i+1 << ":"; std::cin >> target_pos[i][4];
+		// std::cout << "roll_" << i+1 << ":"; std::cin >> target_pos[i][3];
+		// std::cout << "pitch_" << i+1 << ":"; std::cin >> target_pos[i][4];
+		target_pos[i][3] = 0;
+		target_pos[i][4] = 0;
 		std::cout << "yaw_" << i+1 << ":"; std::cin >> target_pos[i][5];
 	}
 }

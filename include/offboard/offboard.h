@@ -16,6 +16,8 @@
 #include <iostream>
 #include <cmath>
 
+const double PI  =3.141592653589793238463;
+
 bool check_position(void);
 bool check_orientation(void);
 void input_target(void);
@@ -106,12 +108,12 @@ void input_target()
 
 double degree(double rad)
 {
-	double radian_to_degree = (rad*180)/3.14;
+	double radian_to_degree = (rad*180)/PI;
 	return radian_to_degree;
 }
 
 double radian(double deg)
 {
-	double degree_to_radian = (deg*3.14)/180;
+	double degree_to_radian = (deg*PI)/180;
 	return degree_to_radian;
 }

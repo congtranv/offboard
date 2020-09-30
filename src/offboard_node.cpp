@@ -86,7 +86,7 @@ int main(int argc, char **argv)
     while(ros::ok())
     {
 		ROS_INFO_STREAM("\nCurrent position: \n" << current_pose.pose);	
-		// ROS_INFO_STREAM("\nTarget position: \n" << target_pose.pose);
+		ROS_INFO_STREAM("\nTarget position: \n" << target_pose.pose);
 
 		// tf Quaternion to RPY
 		tf::Quaternion qc(

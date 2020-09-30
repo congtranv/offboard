@@ -61,17 +61,38 @@ bool check_position()
 bool check_orientation()
 {
 	bool reached;
-		
-	if(((target_pose.pose.orientation.x - 0.1) < current_pose.pose.orientation.x)
-	 && (current_pose.pose.orientation.x < (target_pose.pose.orientation.x + 0.1)) 
-	 && ((target_pose.pose.orientation.y - 0.1) < current_pose.pose.orientation.y)
-	 && (current_pose.pose.orientation.y < (target_pose.pose.orientation.y + 0.1))
-	 && ((target_pose.pose.orientation.z - 0.1) < current_pose.pose.orientation.z)
-	 && (current_pose.pose.orientation.z < (target_pose.pose.orientation.z + 0.1))
-	 && ((target_pose.pose.orientation.w - 0.1) < current_pose.pose.orientation.w)
-	 && (current_pose.pose.orientation.w < (target_pose.pose.orientation.w + 0.1)))
 	
-	/* if((current_pose.pose.orientation.x == target_pose.pose.orientation.x)&&(current_pose.pose.orientation.y == target_pose.pose.orientation.y)&&(current_pose.pose.orientation.z == target_pose.pose.orientation.z)&&(current_pose.pose.orientation.w == target_pose.pose.orientation.w)) */
+	// if(((target_pose.pose.orientation.x - 0.1) < current_pose.pose.orientation.x)
+	//  && (current_pose.pose.orientation.x < (target_pose.pose.orientation.x + 0.1)) 
+	//  && ((target_pose.pose.orientation.y - 0.1) < current_pose.pose.orientation.y)
+	//  && (current_pose.pose.orientation.y < (target_pose.pose.orientation.y + 0.1))
+	//  && ((target_pose.pose.orientation.z - 0.1) < current_pose.pose.orientation.z)
+	//  && (current_pose.pose.orientation.z < (target_pose.pose.orientation.z + 0.1))
+	//  && ((target_pose.pose.orientation.w - 0.1) < current_pose.pose.orientation.w)
+	//  && (current_pose.pose.orientation.w < (target_pose.pose.orientation.w + 0.1)))
+	
+	// tf Quaternion to RPY
+	tf::Quaternion qc(
+		current_pose.pose.orientation.x,
+		current_pose.pose.orientation.y,
+		current_pose.pose.orientation.z,
+		current_pose.pose.orientation.w);
+	tf::Matrix3x3 mc(qc);
+	double rc, pc, yc;
+	mc.getRPY(rc, pc, yc);
+
+	tf::Quaternion qt(
+		current_pose.pose.orientation.x,
+		current_pose.pose.orientation.y,
+		current_pose.pose.orientation.z,
+		current_pose.pose.orientation.w);
+	tf::Matrix3x3 mt(qt);
+	double rt, pt, yt;
+	mt.getRPY(rt, pt, yt);
+	
+	if((((degree(rt)-1)<(degree(rc)))&&(degree(rc)<(degree(rt)+1)))
+	 &&(((degree(pt)-1)<(degree(pc)))&&(degree(pc)<(degree(pt)+1)))
+	 &&(((degree(yt)-1)<(degree(yc)))&&(degree(yc)<(degree(yt)+1)))) 
 	{
 		reached = 1;
 	}

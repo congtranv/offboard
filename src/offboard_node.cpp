@@ -32,6 +32,7 @@ int main(int argc, char **argv)
         ros::spinOnce();
         rate.sleep();
     }
+    ROS_INFO("FCU connected");
 
 	// check current state and position
 	for(int i = 10; ros::ok() && i > 0; --i)

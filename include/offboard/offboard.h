@@ -19,10 +19,13 @@ const double eR  =6378.137; //km
 
 bool check_position(void);
 bool check_orientation(void);
+
 void input_local_target(void);
 void input_global_target(void);
+
 double degree(double);
 double radian(double);
+
 double measureGPS(double, double, double, double);
 
 mavros_msgs::State current_state;

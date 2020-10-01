@@ -57,7 +57,7 @@ int main(int argc, char **argv)
         rate.sleep();
     }
 
-	input_target();
+	input_local_target();
     target_pose.pose.position.x = target_pos[0][0];
     target_pose.pose.position.y = target_pos[0][1];
     target_pose.pose.position.z = target_pos[0][2];

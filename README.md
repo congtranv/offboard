@@ -46,29 +46,19 @@
 - **drone is going to get current gps (global position)**
 
   ```
-    ...
-  
-    goal_position.latitude = global_position.latitude;
-    
-    goal_position.longitude = global_position.longitude;
-    
-    goal_position.altitude = global_position.altitude;
-    
-    ...
+    Got global position: [*Latitude*, *Longitude*, *Altitude*]
   ```
-    
-  **setpoint is:**
-  
+- **check global position and input target**
+
   ```
-    ...
-  
-    goal_position.altitude = goal_position.altitude + 2.0;
-    
-    goal_position.latitude = goal_position.latitude + 0.00001;
-    
-    goal_position.longitude = goal_position.longitude + 0.00001;
-    
-    ...
+    Input GPS position
+
+    Latitude  (degree):
+
+    Longitude (degree):
+
+    Altitude  (meter) :
+
   ```
     
 - **on remote controller** switch to ARM, then switch flight mode to OFFBOARD

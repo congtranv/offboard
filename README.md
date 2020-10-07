@@ -23,7 +23,7 @@
 - *run hovering_node*                 : `rosrun offboard hovering`
 - **check current state and position on screen**
 
-  **input target position: x, y, z**
+  **input target height for hovering (in meter): z**
   
 - **on remote controller** switch to ARM, then switch flight mode to OFFBOARD
 - **on simualation control** `rosrun offboard setmode_offb`
@@ -31,13 +31,13 @@
 ###### offboard node
 - *connect jetson to pixhawk*         : `roslaunch mavros px4.launch`
 - *run offboard_node*                 : `rosrun offboard offboard`
-- **check current state and position on screen**
+- **check current state and pose on screen**
 
   **input number of target (>0)**
   
-  **input target position: pos_x_i, pos_y_i, pos_z_i**
+  **input target position (in meter): pos_x_i, pos_y_i, pos_z_i**
   
-  **input target RPY: roll_i, pitch_i, yaw_i (in degree)**
+  **input target Yaw rotation (in degree): yaw_i**
   
 - **on remote controller** switch to ARM, then switch flight mode to OFFBOARD
 - **on simualation control** `rosrun offboard setmode_offb`

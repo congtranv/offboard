@@ -34,7 +34,7 @@ int main(int argc, char **argv)
             ("mavros/setpoint_position/global", 10);
 
     // the setpoint publishing rate MUST be faster than 2Hz
-    ros::Rate rate(100.0);
+    ros::Rate rate(20.0);
 
     // wait for fcu connection
     while (ros::ok() && !current_state.connected) 

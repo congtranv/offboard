@@ -21,7 +21,7 @@
 ###### hovering node
 - *connect jetson to pixhawk*         : `roslaunch mavros px4.launch`
 - *run hovering_node*                 : `rosrun offboard hovering`
-- **check current state and position on screen**
+- **check current position on screen**
 
   **input target height for hovering (in meter): z**
   
@@ -31,7 +31,7 @@
 ###### offboard node
 - *connect jetson to pixhawk*         : `roslaunch mavros px4.launch`
 - *run offboard_node*                 : `rosrun offboard offboard`
-- **check current state and pose on screen**
+- **check current pose on screen**
 
   **input number of target (>0)**
   

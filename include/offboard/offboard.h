@@ -161,9 +161,9 @@ double radian(double deg)
 	return degree_to_radian;
 }
 
-/******************************************************************/
-/***** measureGPS: measure the distance between 2 GPS points ******/
-/******************************************************************/
+/*********************************************************************************************/
+/***** measureGPS: measure the distance between 2 GPS points that use haversine formula ******/
+/*********************************************************************************************/
 double measureGPS(double lat1, double lon1, double lat2, double lon2)
 {
 	double distance;

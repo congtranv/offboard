@@ -1,12 +1,14 @@
 #include "offboard/offboard.h"
 
 // state callback 
-void state_cb(const mavros_msgs::State::ConstPtr& msg){
+void state_cb(const mavros_msgs::State::ConstPtr& msg)
+{
     current_state = *msg;
 }
 
 // pose callback
-void pose_cb(const geometry_msgs::PoseStamped::ConstPtr& msg){
+void pose_cb(const geometry_msgs::PoseStamped::ConstPtr& msg)
+{
     current_pose = *msg;
 }
 
@@ -39,10 +41,9 @@ int main(int argc, char **argv)
     }
     ROS_INFO("FCU connected");
 
-	// check current state and pose
+	// check current pose
 	for(int i = 10; ros::ok() && i > 0; --i)
 	{
-		ROS_INFO_STREAM("\nCurrent state: \n" << current_state);
 		ROS_INFO_STREAM("\nCurrent position: \n" << current_pose.pose.position);
 
 		// tf Quaternion to RPY
@@ -75,7 +76,8 @@ int main(int argc, char **argv)
 	tf::quaternionTFToMsg(q, target_pose.pose.orientation);
 
     // send a few setpoints before starting
-    for(int i = 10; ros::ok() && i > 0; --i){
+    for(int i = 10; ros::ok() && i > 0; --i)
+    {
         target_pose.header.stamp = ros::Time::now();
         local_pos_pub.publish(target_pose);
         ros::spinOnce();

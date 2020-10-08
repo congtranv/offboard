@@ -25,14 +25,16 @@ int main(int argc, char **argv)
     ros::Subscriber state_sub = nh.subscribe<mavros_msgs::State> 
             ("mavros/state", 10, state_cb);
     ros::Subscriber global_pos_sub = nh.subscribe<sensor_msgs::NavSatFix> 
-            ("mavros/global_position/global", 1, globalPosition_cb);
+            ("mavros/global_position/global", 10, globalPosition_cb);
     
     // publisher
-    ros::Publisher goal_pos_pub = nh.advertise<mavros_msgs::GlobalPositionTarget> 
+    // ros::Publisher goal_pos_pub = nh.advertise<mavros_msgs::GlobalPositionTarget> 
+    //         ("mavros/setpoint_position/global", 10);
+    ros::Publisher goal_pos_pub = nh.advertise<geographic_msgs::GeoPoseStamped> 
             ("mavros/setpoint_position/global", 10);
 
     // the setpoint publishing rate MUST be faster than 2Hz
-    ros::Rate rate(20.0);
+    ros::Rate rate(100.0);
 
     // wait for fcu connection
     while (ros::ok() && !current_state.connected) 
@@ -54,9 +56,9 @@ int main(int argc, char **argv)
 
     // set target position
     input_global_target();
-    goal_position.latitude = latitude;
-    goal_position.longitude = longitude;
-    goal_position.altitude = altitude;
+    goal_position.pose.position.latitude = latitude;
+    goal_position.pose.position.longitude = longitude;
+    goal_position.pose.position.altitude = altitude;
 
     // send a few setpoints before starting
     for (int i=10; ros::ok() && i>0; --i) 

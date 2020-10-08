@@ -37,7 +37,8 @@ geometry_msgs::PoseStamped target_pose;
 
 bool global_position_received = false;
 sensor_msgs::NavSatFix global_position;
-mavros_msgs::GlobalPositionTarget goal_position;
+// mavros_msgs::GlobalPositionTarget goal_position;
+geographic_msgs::GeoPoseStamped goal_position;
 
 tf::Quaternion q;
 
@@ -144,7 +145,7 @@ void input_global_target()
 }
 
 /**********************************************************/
-/***** degree: convert angular from radian to degree ******/
+/***** degree: convert angle from radian to degree ******/
 /**********************************************************/
 double degree(double rad)
 {
@@ -153,7 +154,7 @@ double degree(double rad)
 }
 
 /**********************************************************/
-/***** radian: convert angular from degree to radian ******/
+/***** radian: convert angle from degree to radian ******/
 /**********************************************************/
 double radian(double deg)
 {

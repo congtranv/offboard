@@ -12,8 +12,7 @@
 ## required
 - **ros**             : Melodic (on Ubuntu 18.04)
 - **catkin workspace**: `catkin_ws`
-- **mavros**          : at `catkin_ws/src/mavros`
-- **mavlink**         : at `catkin_ws/src/mavlink`
+- **mavros**          : [here](https://dev.px4.io/master/en/ros/mavros_installation.html)
 
 - **copy `offboard` directory to `catkin_ws/src` and build**
 

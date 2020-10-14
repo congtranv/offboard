@@ -55,7 +55,7 @@
 - **drone is going to get current gps (global position)**
 
   ```
-    Got global position: [*Latitude*, *Longitude*, *Altitude*]
+    Current GPS position:: [*Latitude*, *Longitude*, *Altitude*]
   ```
 - **check global position and input target**
 

@@ -9,8 +9,6 @@
 #include <mavros_msgs/SetMode.h>
 #include <mavros_msgs/GlobalPositionTarget.h>
 #include <sensor_msgs/NavSatFix.h>
-#include <mavros_msgs/GPSRAW.h>
-
 #include <sensor_msgs/BatteryState.h>
 
 #include <iostream>
@@ -39,24 +37,19 @@ geometry_msgs::PoseStamped current_pose;
 geometry_msgs::PoseStamped target_pose;
 
 bool global_position_received = false;
-bool gps_position_received = false;
-
 sensor_msgs::NavSatFix global_position;
 geographic_msgs::GeoPoseStamped goal_position;
-mavros_msgs::GPSRAW gps_position;
 
 sensor_msgs::BatteryState current_batt;
 
 tf::Quaternion q;
 
-int target_num, goal_num;
+int target_num;
 float target_pos[10][7];
-double goal_pos[10][3];
-
 double roll, pitch, yaw;
 double r, p, y;
 
-double distance;
+double latitude, longitude, altitude, distance;
 float batt_percent;
 
 /****** FUNCTIONS ******/
@@ -79,13 +72,7 @@ void globalPosition_cb(const sensor_msgs::NavSatFix::ConstPtr& msg)
 {
     global_position = *msg;
     global_position_received = true;
-}
-
-// gps position callback
-void gpsPosition_cb(const mavros_msgs::GPSRAW::ConstPtr& msg) 
-{
-    gps_position = *msg;
-	gps_position_received = true;
+    ROS_INFO_ONCE("Got global position: [%f, %f, %f]", msg->latitude, msg->longitude, msg->altitude);
 }
 
 // battery status callback
@@ -154,25 +141,6 @@ bool check_orientation()
 	return reached;
 }
 
-/****************************************************************************************/
-/***** check_goal: check when drone reached the GPS goal. return the true or false ******/
-/****************************************************************************************/
-bool check_goal()
-{
-	bool reached;
-	if((global_position.latitude == goal_position.pose.position.latitude)
-	 &&(global_position.longitude == goal_position.pose.position.longitude)
-	 &&(global_position.altitude == goal_position.pose.position.altitude))
-	{
-		reached = 1;
-	}
-	else
-	{
-		reached = 0;
-	}
-	return reached;
-}
-
 /**************************************************************************/
 /***** input_local_target: input the number of waypoints and each point   *
  * coodinates (x, y, z). and input the yaw rotation at each waypoint ******/
@@ -183,33 +151,27 @@ void input_local_target()
 	std::cout << "Number of target(s): "; std::cin >> target_num;
 	for (int i = 0; i < target_num; i++)
 	{
-		std::cout << "Target (" << i+1 << ") position (in meter):" <<std::endl; 
+		std::cout << "Target (" << i+1 << ") position (meter):" <<std::endl; 
 		std::cout << "pos_x_" << i+1 << ":"; std::cin >> target_pos[i][0];
 		std::cout << "pos_y_" << i+1 << ":"; std::cin >> target_pos[i][1];
 		std::cout << "pos_z_" << i+1 << ":"; std::cin >> target_pos[i][2];
 
-		std::cout << "Target (" << i+1 << ") orientation (in degree):" <<std::endl; 
+		std::cout << "Target (" << i+1 << ") orientation (degree):" <<std::endl; 
 		target_pos[i][3] = 0;
 		target_pos[i][4] = 0;
 		std::cout << "yaw_" << i+1 << ":"; std::cin >> target_pos[i][5];
 	}
 }
 
-/*************************************************************************/
-/***** input_global_target: input the number of waypoints and each point *
- * GPS [latitude, longitude, altitude]                              ******/
-/*************************************************************************/
+/*************************************************************************************/
+/***** input_global_target: input the GPS [latitude, longitude, altitude] point ******/
+/*************************************************************************************/
 void input_global_target()
 {
-	std::cout << "Input goal position:" << std::endl;
-	std::cout << "Number of goal: "; std::cin >> goal_num;
-	for (int i = 0; i < goal_num; i++)
-	{
-		std::cout << "Goal (" << i+1 << ") position:" <<std::endl; 
-		std::cout << "Latitude__" << i+1 << " (degree):"; std::cin >> goal_pos[i][0];
-		std::cout << "Longitude_" << i+1 << " (degree):"; std::cin >> goal_pos[i][1];
-		std::cout << "Altitude__" << i+1 << " (meter.ASL):"; std::cin >> goal_pos[i][2];
-	}
+	std::cout << "Input GPS position" << std::endl;
+	std::cout << "Latitude  (degree):"; std::cin >> latitude;
+	std::cout << "Longitude (degree):"; std::cin >> longitude;
+	std::cout << "Altitude  (meter) :"; std::cin >> altitude;
 }
 
 /**********************************************************/
@@ -233,28 +195,11 @@ double radian(double deg)
 /*********************************************************************************************/
 /***** measureGPS: measure the distance between 2 GPS points that use haversine formula ******/
 /*********************************************************************************************/
-double measureGPS(double lat1, double lon1, double alt1, double lat2, double lon2, double alt2)
+double measureGPS(double lat1, double lon1, double lat2, double lon2)
 {
-	double flat, plus, distance;
+	double distance;
 	lat1 = radian(lat1); lon1 = radian(lon1);
 	lat2 = radian(lat2); lon2 = radian(lon2);
-	flat = 2*eR*asin(sqrt(sin((lat2-lat1)/2)*sin((lat2-lat1)/2)+cos(lat1)*cos(lat2)*sin((lon2-lon1)/2)*sin((lon2-lon1)/2)))*1000; //m
-	if (alt1 == alt2)
-	{
-		distance = flat;
-	}
-	else
-	{
-		if 	(alt1 > alt2)
-		{
-			plus = flat/((alt1/alt2)-1);
-			distance = sqrt((flat+plus)*(flat+plus) + alt1*alt1) - sqrt(plus*plus + alt2*alt2);
-		}
-		else
-		{
-			plus = flat/((alt1/alt2)-1);
-			distance = sqrt((flat+plus)*(flat+plus) + alt2*alt2) - sqrt(plus*plus + alt1*alt1);
-		}
-	}
+	distance = 2*eR*asin(sqrt(sin((lat2-lat1)/2)*sin((lat2-lat1)/2)+cos(lat1)*cos(lat2)*sin((lon2-lon1)/2)*sin((lon2-lon1)/2)))*1000; //m
 	return distance;
 }

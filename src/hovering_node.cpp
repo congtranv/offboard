@@ -35,7 +35,7 @@ int main(int argc, char **argv)
 	{
 		ROS_INFO_STREAM("\nCurrent pose: \n" << current_pose.pose.position);
         batt_percent = current_batt.percentage * 100;
-        std::printf("Current Battery: %.2f \n", batt_percent);	
+        std::printf("Current Battery: %.1f \n", batt_percent);	
 
 		ros::spinOnce();
         rate.sleep();
@@ -62,7 +62,7 @@ int main(int argc, char **argv)
     {
         ROS_INFO_STREAM("\nCurrent position: \n" << current_pose.pose.position);	
         batt_percent = current_batt.percentage * 100;
-        std::printf("Current Battery: %.2f \n", batt_percent);
+        std::printf("Current Battery: %.1f \n", batt_percent);
 
         target_pose.header.stamp = ros::Time::now();   
         local_pos_pub.publish(target_pose);

@@ -9,6 +9,8 @@
 #include <mavros_msgs/SetMode.h>
 #include <mavros_msgs/GlobalPositionTarget.h>
 #include <sensor_msgs/NavSatFix.h>
+#include <mavros_msgs/GPSRAW.h>
+
 #include <sensor_msgs/BatteryState.h>
 
 #include <iostream>
@@ -37,8 +39,11 @@ geometry_msgs::PoseStamped current_pose;
 geometry_msgs::PoseStamped target_pose;
 
 bool global_position_received = false;
+bool gps_position_received = false;
+
 sensor_msgs::NavSatFix global_position;
 geographic_msgs::GeoPoseStamped goal_position;
+mavros_msgs::GPSRAW gps_position;
 
 sensor_msgs::BatteryState current_batt;
 
@@ -72,7 +77,13 @@ void globalPosition_cb(const sensor_msgs::NavSatFix::ConstPtr& msg)
 {
     global_position = *msg;
     global_position_received = true;
-    ROS_INFO_ONCE("Got global position: [%f, %f, %f]", msg->latitude, msg->longitude, msg->altitude);
+}
+
+// gps position callback
+void gpsPosition_cb(const mavros_msgs::GPSRAW::ConstPtr& msg) 
+{
+    gps_position = *msg;
+	gps_position_received = true;
 }
 
 // battery status callback
@@ -151,12 +162,12 @@ void input_local_target()
 	std::cout << "Number of target(s): "; std::cin >> target_num;
 	for (int i = 0; i < target_num; i++)
 	{
-		std::cout << "Target (" << i+1 << ") position (meter):" <<std::endl; 
+		std::cout << "Target (" << i+1 << ") position (in meter):" <<std::endl; 
 		std::cout << "pos_x_" << i+1 << ":"; std::cin >> target_pos[i][0];
 		std::cout << "pos_y_" << i+1 << ":"; std::cin >> target_pos[i][1];
 		std::cout << "pos_z_" << i+1 << ":"; std::cin >> target_pos[i][2];
 
-		std::cout << "Target (" << i+1 << ") orientation (degree):" <<std::endl; 
+		std::cout << "Target (" << i+1 << ") orientation (in degree):" <<std::endl; 
 		target_pos[i][3] = 0;
 		target_pos[i][4] = 0;
 		std::cout << "yaw_" << i+1 << ":"; std::cin >> target_pos[i][5];
@@ -195,11 +206,28 @@ double radian(double deg)
 /*********************************************************************************************/
 /***** measureGPS: measure the distance between 2 GPS points that use haversine formula ******/
 /*********************************************************************************************/
-double measureGPS(double lat1, double lon1, double lat2, double lon2)
+double measureGPS(double lat1, double lon1, double alt1, double lat2, double lon2, double alt2)
 {
-	double distance;
+	double flat, plus, Distance;
 	lat1 = radian(lat1); lon1 = radian(lon1);
 	lat2 = radian(lat2); lon2 = radian(lon2);
-	distance = 2*eR*asin(sqrt(sin((lat2-lat1)/2)*sin((lat2-lat1)/2)+cos(lat1)*cos(lat2)*sin((lon2-lon1)/2)*sin((lon2-lon1)/2)))*1000; //m
-	return distance;
+	flat = 2*eR*asin(sqrt(sin((lat2-lat1)/2)*sin((lat2-lat1)/2)+cos(lat1)*cos(lat2)*sin((lon2-lon1)/2)*sin((lon2-lon1)/2)))*1000; //m
+	if (alt1 == alt2)
+	{
+		Distance = flat;
+	}
+	else
+	{
+		if 	(alt1 > alt2)
+		{
+			plus = flat/((alt1/alt2)-1);
+			Distance = sqrt((flat+plus)*(flat+plus) + alt1*alt1) - sqrt(plus*plus + alt2*alt2);
+		}
+		else
+		{
+			plus = flat/((alt2/alt1)-1);
+			Distance = sqrt((flat+plus)*(flat+plus) + alt2*alt2) - sqrt(plus*plus + alt1*alt1);
+		}
+	}
+	return Distance;
 }

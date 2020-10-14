@@ -50,7 +50,7 @@ int main(int argc, char **argv)
 		std::cout << "Yaw  : " << degree(y) << std::endl;		
 
         batt_percent = current_batt.percentage * 100;
-        std::printf("Current Battery: %.2f \n", batt_percent);
+        std::printf("Current Battery: %.1f \n", batt_percent);
 
 		ros::spinOnce();
         rate.sleep();
@@ -97,7 +97,7 @@ int main(int argc, char **argv)
 		std::cout << "Yaw  : " << degree(y) << std::endl;
         
         batt_percent = current_batt.percentage * 100;
-        std::printf("Current Battery: %.2f \n", batt_percent);
+        std::printf("Current Battery: %.1f \n", batt_percent);
 
 		// publish target position
         if (i < target_num)

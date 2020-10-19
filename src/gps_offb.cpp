@@ -103,7 +103,7 @@ int main(int argc, char **argv)
                                   global_position.longitude, 
                                   alt, goal_pos[i][0], 
                                   goal_pos[i][1], goal_pos[i][2]);
-            std::printf("Distance to target: %.2f m \n", distance);
+            std::printf("Distance to goal: %.2f m \n", distance);
 
             ros::spinOnce();
             rate.sleep();

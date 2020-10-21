@@ -50,11 +50,11 @@ int main(int argc, char **argv)
         batt_percent = current_batt.percentage * 100;
         std::printf("Current Battery: %.1f \n", batt_percent);
 
-        double alt = double(gps_position.alt)/1000;
+        double global_position_altitude = double(gps_position.alt)/1000;
         std::printf("Current GPS position: [%f, %f, %.3f]\n", 
                      global_position.latitude, 
                      global_position.longitude, 
-                     alt);
+                     global_position_altitude);
                      
         ros::spinOnce();
         rate.sleep();
@@ -79,6 +79,7 @@ int main(int argc, char **argv)
     }
     ROS_INFO("Ready");
 
+    // get home, at 3m above the launch position
     double home_lat = global_position.latitude;
     double home_lon = global_position.longitude;
     double home_alt = double(gps_position.alt)/1000 + 3;
@@ -98,11 +99,11 @@ int main(int argc, char **argv)
             goal_position.header.stamp = ros::Time::now();
             goal_pos_pub.publish(goal_position);
             
-            double alt = double(gps_position.alt)/1000;
+            double global_position_altitude = double(gps_position.alt)/1000;
             distance = measureGPS(global_position.latitude, 
                                   global_position.longitude, 
-                                  alt, goal_pos[i][0], 
-                                  goal_pos[i][1], goal_pos[i][2]);
+                                  global_position_altitude, 
+                                  goal_pos[i][0], goal_pos[i][1], goal_pos[i][2]);
             std::printf("Distance to goal: %.2f m \n", distance);
 
             ros::spinOnce();
@@ -117,10 +118,10 @@ int main(int argc, char **argv)
             goal_position.header.stamp = ros::Time::now();
             goal_pos_pub.publish(goal_position);
 
-            double alt = double(gps_position.alt)/1000;
+            double global_position_altitude = double(gps_position.alt)/1000;
             distance = measureGPS(global_position.latitude, 
                                   global_position.longitude, 
-                                  alt, 
+                                  global_position_altitude, 
                                   home_lat, home_lon, home_alt);
             std::printf("Distance to home: %.2f m \n", distance);
 
@@ -130,13 +131,7 @@ int main(int argc, char **argv)
             // goal_position.pose.position.altitude  = goal_pos[goal_num-1][2];
             // goal_position.header.stamp = ros::Time::now();
             // goal_pos_pub.publish(goal_position);
-
-            // double alt = double(gps_position.alt)/1000;
-            // distance = measureGPS(global_position.latitude, 
-            //                       global_position.longitude, 
-            //                       alt, goal_pos[goal_num-1][0], 
-            //                       goal_pos[goal_num-1][1], goal_pos[goal_num-1][2]);
-            // std::printf("Distance to target: %.2f m \n", distance);
+            // ROS_INFO_ONCE("Reached final goal, keep position")
 
             ros::spinOnce();
             rate.sleep();

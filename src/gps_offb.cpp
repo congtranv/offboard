@@ -11,16 +11,16 @@ int main(int argc, char **argv)
     ros::Subscriber state_sub = nh.subscribe<mavros_msgs::State> 
             ("mavros/state", 10, state_cb);
     ros::Subscriber global_pos_sub = nh.subscribe<sensor_msgs::NavSatFix> 
-            ("mavros/global_position/global", 10, globalPosition_cb);
+            ("mavros/global_position/global", 100, globalPosition_cb);
     ros::Subscriber gps_pos_sub = nh.subscribe<mavros_msgs::GPSRAW> 
-            ("mavros/gpsstatus/gps1/raw", 10, gpsPosition_cb);
+            ("mavros/gpsstatus/gps1/raw", 50, gpsPosition_cb);
 
     ros::Subscriber batt_sub = nh.subscribe<sensor_msgs::BatteryState> 
             ("mavros/battery", 10, battery_cb);
 
     // publisher
     ros::Publisher goal_pos_pub = nh.advertise<geographic_msgs::GeoPoseStamped> 
-            ("mavros/setpoint_position/global", 10);
+            ("mavros/setpoint_position/global", 100);
 
     // the setpoint publishing rate MUST be faster than 2Hz
     ros::Rate rate(20.0);

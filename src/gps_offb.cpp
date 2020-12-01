@@ -9,14 +9,14 @@ int main(int argc, char **argv)
 
     // subscriber
     ros::Subscriber state_sub = nh.subscribe<mavros_msgs::State> 
-            ("mavros/state", 10, state_cb);
+            ("mavros/state", 50, state_cb);
     ros::Subscriber global_pos_sub = nh.subscribe<sensor_msgs::NavSatFix> 
-            ("mavros/global_position/global", 100, globalPosition_cb);
+            ("mavros/global_position/global", 1000, globalPosition_cb);
     ros::Subscriber gps_pos_sub = nh.subscribe<mavros_msgs::GPSRAW> 
-            ("mavros/gpsstatus/gps1/raw", 50, gpsPosition_cb);
+            ("mavros/gpsstatus/gps1/raw", 100, gpsPosition_cb);
 
     ros::Subscriber batt_sub = nh.subscribe<sensor_msgs::BatteryState> 
-            ("mavros/battery", 10, battery_cb);
+            ("mavros/battery", 50, battery_cb);
 
     // publisher
     ros::Publisher goal_pos_pub = nh.advertise<geographic_msgs::GeoPoseStamped> 
@@ -142,6 +142,11 @@ int main(int argc, char **argv)
         std::cout << check << std::endl;
 		if(check)
 		{
+            double global_position_altitude = double(gps_position.alt)/1000;
+            std::printf("Current GPS position: [%f, %f, %.3f]\n", 
+                     global_position.latitude, 
+                     global_position.longitude, 
+                     global_position_altitude);
             ros::Duration(5).sleep();
 			i = i + 1;
 			ros::spinOnce();

@@ -135,10 +135,10 @@ bool check_orientation()
 	mc.getRPY(rc, pc, yc);
 
 	tf::Quaternion qt(
-		current_pose.pose.orientation.x,
-		current_pose.pose.orientation.y,
-		current_pose.pose.orientation.z,
-		current_pose.pose.orientation.w);
+		target_pose.pose.orientation.x,
+		target_pose.pose.orientation.y,
+		target_pose.pose.orientation.z,
+		target_pose.pose.orientation.w);
 	tf::Matrix3x3 mt(qt);
 	double rt, pt, yt;
 	mt.getRPY(rt, pt, yt);

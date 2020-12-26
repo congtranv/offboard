@@ -284,6 +284,7 @@ int main(int argc, char **argv)
                                 global_position.latitude, 
                                 global_position.longitude,
                                 global_position.altitude);
+                    files("setpoint", 0, 0, 0, 0, 0, 0);
                     std::printf("Next position: [%f, %f, %.3f]\n", 
                                 goal_pos[i+1][0], 
                                 goal_pos[i+1][1],
@@ -346,6 +347,7 @@ int main(int argc, char **argv)
                                 global_position.latitude, 
                                 global_position.longitude,
                                 global_position.altitude);
+                    files("setpoint", 0, 0, 0, 0, 0, 0);
                     std::printf("Ready to landing \n");
                     ros::Duration(5).sleep();
 

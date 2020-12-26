@@ -252,9 +252,9 @@ void input_global_target()
 	for (int i = 0; i < goal_num; i++)
 	{
 		std::cout << "Goal ("<< i+1 <<") position:" << std::endl;
-		std::cout << "Latitude  " << i+1 << " (in degree):"; std::cin >> goal_pos[i][0];
-		std::cout << "Longitude " << i+1 << " (in degree):"; std::cin >> goal_pos[i][1];
-		std::cout << "Altitude  " << i+1 << "  (in meter):"; std::cin >> goal_pos[i][2];
+		std::cout << "Latitude  " << i+1 << " (in degree): "; std::cin >> goal_pos[i][0];
+		std::cout << "Longitude " << i+1 << " (in degree): "; std::cin >> goal_pos[i][1];
+		std::cout << "Altitude  " << i+1 << "  (in meter): "; std::cin >> goal_pos[i][2];
 	}
 }
 

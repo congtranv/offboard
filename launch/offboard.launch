@@ -1,4 +1,3 @@
 <launch>
-    <!-- <include file="$(find mavros)/launch/px4.launch"> </include> -->
-    <node pkg="offboard" type="setpoint_node" name="setpoint" output="screen"></node>
+    <node pkg="offboard" type="setpoint" name="setpoint" output="screen"></node>
 </launch>

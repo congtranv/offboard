@@ -4,7 +4,7 @@ int main(int argc, char **argv)
 {
 
     // initialize ros node
-    ros::init(argc, argv, "gps_offb");
+    ros::init(argc, argv, "gps");
     ros::NodeHandle nh;
 
     // subscriber
@@ -12,8 +12,6 @@ int main(int argc, char **argv)
             ("mavros/state", 50, state_cb);
     ros::Subscriber global_pos_sub = nh.subscribe<sensor_msgs::NavSatFix> 
             ("mavros/global_position/global", 1000, globalPosition_cb);
-    ros::Subscriber gps_pos_sub = nh.subscribe<mavros_msgs::GPSRAW> 
-            ("mavros/gpsstatus/gps1/raw", 100, gpsPosition_cb);
 
     ros::Subscriber batt_sub = nh.subscribe<sensor_msgs::BatteryState> 
             ("mavros/battery", 50, battery_cb);
@@ -35,7 +33,7 @@ int main(int argc, char **argv)
     ROS_INFO("FCU connected");
 
     // wait for position information
-    while (ros::ok() && !global_position_received && !gps_position_received) 
+    while (ros::ok() && !global_position_received)
     {
         ROS_INFO_ONCE("Waiting for GPS signal...");
         ros::spinOnce();
@@ -50,11 +48,10 @@ int main(int argc, char **argv)
         batt_percent = current_batt.percentage * 100;
         std::printf("Current Battery: %.1f \n", batt_percent);
 
-        double global_position_altitude = double(gps_position.alt)/1000;
         std::printf("Current GPS position: [%f, %f, %.3f]\n", 
                      global_position.latitude, 
                      global_position.longitude, 
-                     global_position_altitude);
+                     global_position.altitude);
                      
         ros::spinOnce();
         rate.sleep();
@@ -82,8 +79,8 @@ int main(int argc, char **argv)
     // get home, at 3m above the launch position
     double home_lat = global_position.latitude;
     double home_lon = global_position.longitude;
-    double home_alt = double(gps_position.alt)/1000 + 3;
-    std::printf("Home position: [%f, %f, %f] \n", home_lat, home_lon, home_alt);
+    double home_alt = global_position.altitude + 3;
+    std::printf("Home position: [%f, %f, %.3f] \n", home_lat, home_lon, home_alt);
     ros::Duration(5).sleep();
 
     int i=0;
@@ -99,10 +96,9 @@ int main(int argc, char **argv)
             goal_position.header.stamp = ros::Time::now();
             goal_pos_pub.publish(goal_position);
             
-            double global_position_altitude = double(gps_position.alt)/1000;
             distance = measureGPS(global_position.latitude, 
                                   global_position.longitude, 
-                                  global_position_altitude, 
+                                  global_position.altitude, 
                                   goal_pos[i][0], goal_pos[i][1], goal_pos[i][2]);
             std::printf("Distance to goal: %.2f m \n", distance);
 
@@ -118,10 +114,9 @@ int main(int argc, char **argv)
             goal_position.header.stamp = ros::Time::now();
             goal_pos_pub.publish(goal_position);
 
-            double global_position_altitude = double(gps_position.alt)/1000;
             distance = measureGPS(global_position.latitude, 
                                   global_position.longitude, 
-                                  global_position_altitude, 
+                                  global_position.altitude, 
                                   home_lat, home_lon, home_alt);
             std::printf("Distance to home: %.2f m \n", distance);
 
@@ -138,15 +133,19 @@ int main(int argc, char **argv)
         }        
         
         // check GPS reached
-        bool check = check_global();
+        bool check = check_global(goal_position.pose.position.latitude,
+                                  goal_position.pose.position.longitude,
+                                  goal_position.pose.position.altitude,
+                                  global_position.latitude, 
+                                  global_position.longitude, 
+                                  global_position.altitude );
         std::cout << check << std::endl;
 		if(check)
 		{
-            double global_position_altitude = double(gps_position.alt)/1000;
             std::printf("Current GPS position: [%f, %f, %.3f]\n", 
                      global_position.latitude, 
                      global_position.longitude, 
-                     global_position_altitude);
+                     global_position.altitude);
             ros::Duration(5).sleep();
 			i = i + 1;
 			ros::spinOnce();

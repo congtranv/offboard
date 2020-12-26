@@ -1,65 +1,124 @@
+/******* ros *******/
 #include <ros/ros.h>
-#include <geometry_msgs/PoseStamped.h>
-#include <geographic_msgs/GeoPoseStamped.h>
 #include <mavros_msgs/State.h>
-#include <tf/tf.h>
-#include <tf/transform_datatypes.h>
-
 #include <mavros_msgs/CommandBool.h>
 #include <mavros_msgs/SetMode.h>
+#include <sensor_msgs/BatteryState.h>
+/******* local position *******/
+#include <geometry_msgs/PoseStamped.h>
+#include <geographic_msgs/GeoPoseStamped.h>
+/******* global position *******/
 #include <mavros_msgs/GlobalPositionTarget.h>
 #include <sensor_msgs/NavSatFix.h>
-#include <mavros_msgs/GPSRAW.h>
-
-#include <sensor_msgs/BatteryState.h>
-
+/******* tranformation *******/
+#include <tf/tf.h>
+#include <tf/transform_datatypes.h>
+/******* c++ *******/
 #include <iostream>
+#include <fstream>
 #include <cmath>
 #include <cstdio>
 
 /****** DEFINE CONSTANTS ******/
 const double PI  =3.141592653589793238463;
-const double eR  =6378.137; //km
+const double eR  =6378.137; // earth radius in km
 
 /****** DEFINE FUNCTIONS ******/
-bool check_position(void);
-bool check_orientation(void);
-bool check_global(void);
+/********************************************************************************/
+/***** check_position: check when drone reached the target positions       ******/
+/***** input: x_target, y_target, ztarget, x_current, y_current, z_current ******/
+/***** return: true or false                                               ******/          
+/********************************************************************************/
+bool check_position(double, double, double,
+				    double, double, double);
 
+/*******************************************************************************************/
+/***** check_orientation: check when drone reached the target orientations            ******/
+/***** input: (quaternion target) xt, yt, zt, wt, (quaternion current) xc, yc, zc, wc ******/
+/***** return: true or false                                                          ******/
+/*******************************************************************************************/
+bool check_orientation(double, double, double, double,
+				       double, double, double, double);
+
+/**************************************************************************/
+/***** check_global: check when drone reached the GPS goal positions ******/
+/***** input: (target) lat, lon, alt, (current) lat0, lon0, alt0     ******/
+/***** return: true or false                                         ******/       
+/**************************************************************************/
+bool check_global(double, double, double,
+				  double, double, double);
+
+/***************************************************************************/
+/***** input_local_target: input the local coodinate (x, y, z) points ******/
+/***** and (maybe) input the yaw rotation at each point               ******/
+/***************************************************************************/
 void input_local_target(void);
+
+/****************************************************************************************/
+/***** input_global_target: input the GPS [latitude, longitude, altitude] point(s) ******/
+/****************************************************************************************/
 void input_global_target(void);
 
+/*******************************************************************/
+/***** input_target: choose the local or global input targets ******/
+/*******************************************************************/
+void input_target(void);
+
+/********************************************************/
+/***** degree: convert angle from radian to degree ******/
+/***** input: angle in radian                      ******/
+/***** return: angle in degree                     ******/
+/********************************************************/
 double degree(double);
+
+/********************************************************/
+/***** radian: convert angle from degree to radian ******/
+/***** input: angle in degree                      ******/
+/***** return: angle in radian                     ******/
+/********************************************************/
 double radian(double);
 
-double measureGPS(double, double, double, double);
+/*********************************************************************************************/
+/***** measureGPS: measure the distance between 2 GPS points that use haversine formula ******/
+/***** input: (GPS1) lat1, lon1, alt1, (GPS2) lat2, lon2, alt2                          ******/
+/***** return: distance in meters                                                       ******/
+/*********************************************************************************************/
+double measureGPS(double, double, double, double, double, double);
+
+/******************************************************************/
+/***** files: write setpoint local and global positions into ******/
+/***** a file in format .yaml. save to the working directory ******/
+/***** input: "name of file", x, y, z, lat, lon, alt         ******/
+/******************************************************************/
+void files(std::string, double, double, double,
+						double, double, double);
 
 /****** DECLARE VARIANTS ******/
 mavros_msgs::State current_state;
+mavros_msgs::SetMode set_mode;
+
 geometry_msgs::PoseStamped current_pose;
 geometry_msgs::PoseStamped target_pose;
 
 bool global_position_received = false;
-bool gps_position_received = false;
-
 sensor_msgs::NavSatFix global_position;
 geographic_msgs::GeoPoseStamped goal_position;
-mavros_msgs::GPSRAW gps_position;
 
 sensor_msgs::BatteryState current_batt;
 
-tf::Quaternion q;
+tf::Quaternion q; // quaternion to transform to RPY
 
-int target_num;
-float target_pos[10][7];
-double roll, pitch, yaw;
-double r, p, y;
+int target_num; // number of local setpoints
+float target_pos[10][7]; // local setpoints list
+double roll, pitch, yaw; // roll, pitch, yaw angle
+double r, p, y; // roll, pitch, yaw use in transform
 
-int goal_num;
-double goal_pos[10][3];
-
+int goal_num; // number of global setpoints
+double goal_pos[10][3]; // global setpoints list
 double latitude, longitude, altitude, distance;
-float batt_percent;
+
+bool input_type = true; // true == input local || false == input global setpoints
+float batt_percent; // baterry capacity
 
 /****** FUNCTIONS ******/
 
@@ -83,31 +142,24 @@ void globalPosition_cb(const sensor_msgs::NavSatFix::ConstPtr& msg)
     global_position_received = true;
 }
 
-// gps position callback
-void gpsPosition_cb(const mavros_msgs::GPSRAW::ConstPtr& msg) 
-{
-    gps_position = *msg;
-	gps_position_received = true;
-}
-
 // battery status callback
 void battery_cb(const sensor_msgs::BatteryState::ConstPtr& msg) 
 {
     current_batt = *msg;
 }
 
-/****************************************************************************************************/
-/***** check_position: check when drone reached the target positions. return the true or false ******/
-/****************************************************************************************************/
-bool check_position()
+/***** executed functions *****/
+
+bool check_position(double target_x, double target_y, double target_z,
+					double currentx, double currenty, double currentz)
 {
 	bool reached;
-	if(((target_pose.pose.position.x - 0.1) < current_pose.pose.position.x)
-	&& (current_pose.pose.position.x < (target_pose.pose.position.x + 0.1)) 
-	&& ((target_pose.pose.position.y - 0.1) < current_pose.pose.position.y)
-	&& (current_pose.pose.position.y < (target_pose.pose.position.y + 0.1))
-	&& ((target_pose.pose.position.z - 0.1) < current_pose.pose.position.z)
-	&& (current_pose.pose.position.z < (target_pose.pose.position.z + 0.1)))
+	if(((target_x - 0.1) < currentx)
+	&& (currentx < (target_x + 0.1)) 
+	&& ((target_y - 0.1) < currenty)
+	&& (currenty < (target_y + 0.1))
+	&& ((target_z - 0.1) < currentz)
+	&& (currentz < (target_z + 0.1)))
 	{
 		reached = 1;
 	}
@@ -118,27 +170,23 @@ bool check_position()
 	return reached;
 }
 
-/**********************************************************************************************************/
-/***** check_orientation: check when drone reached the target orientations. return the true or false ******/
-/**********************************************************************************************************/
-bool check_orientation()
+bool check_orientation(double target_x, double target_y, double target_z, double target_w,
+					   double currentx, double currenty, double currentz, double currentw)
 {
 	bool reached;
 	// tf Quaternion to RPY
-	tf::Quaternion qc(
-		current_pose.pose.orientation.x,
-		current_pose.pose.orientation.y,
-		current_pose.pose.orientation.z,
-		current_pose.pose.orientation.w);
+	tf::Quaternion qc(currentx,
+					  currenty,
+					  currentz,
+					  currentw);
 	tf::Matrix3x3 mc(qc);
 	double rc, pc, yc;
 	mc.getRPY(rc, pc, yc);
 
-	tf::Quaternion qt(
-		target_pose.pose.orientation.x,
-		target_pose.pose.orientation.y,
-		target_pose.pose.orientation.z,
-		target_pose.pose.orientation.w);
+	tf::Quaternion qt(target_x,
+					  target_y,
+					  target_z,
+					  target_w);
 	tf::Matrix3x3 mt(qt);
 	double rt, pt, yt;
 	mt.getRPY(rt, pt, yt);
@@ -156,20 +204,17 @@ bool check_orientation()
 	return reached;
 }
 
-/****************************************************************************************************/
-/***** check_global: check when drone reached the GPS goal positions. return the true or false ******/
-/****************************************************************************************************/
-bool check_global()
+bool check_global(double lat, double lon, double alt,
+				double lat0, double lon0, double alt0)
 {
 	bool reached;
-	double global_position_alt = double(gps_position.alt)/1000;
 	if(
-		((goal_position.pose.position.latitude - 0.000001) < global_position.latitude)
-	 && (global_position.latitude < (goal_position.pose.position.latitude + 0.000001)) 
-	 && ((goal_position.pose.position.longitude - 0.000001) < global_position.longitude)
-	 && (global_position.longitude < (goal_position.pose.position.longitude + 0.000001))
-	 && ((goal_position.pose.position.altitude - 0.1) < global_position_alt)
-	 && (global_position_alt < (goal_position.pose.position.altitude + 0.1))
+		((lat - 0.000001) < lat0)
+	 && (lat0 < (lat + 0.000001)) 
+	 && ((lon - 0.000001) < lon0)
+	 && (lon0 < (lon + 0.000001))
+	 && ((alt - 0.1) < alt0)
+	 && (alt0 < (alt + 0.1))
 	)
 	{
 		reached = 1;
@@ -181,13 +226,9 @@ bool check_global()
 	return reached;
 }
 
-/**************************************************************************/
-/***** input_local_target: input the number of waypoints and each point   *
- * coodinates (x, y, z). and input the yaw rotation at each waypoint ******/
-/**************************************************************************/
 void input_local_target()
 {
-	std::cout << "Input target(s) position:" << std::endl;
+	std::cout << "Input Local position(s)" << std::endl;
 	std::cout << "Number of target(s): "; std::cin >> target_num;
 	for (int i = 0; i < target_num; i++)
 	{
@@ -196,23 +237,13 @@ void input_local_target()
 		std::cout << "pos_y_" << i+1 << ":"; std::cin >> target_pos[i][1];
 		std::cout << "pos_z_" << i+1 << ":"; std::cin >> target_pos[i][2];
 
-		std::cout << "Target (" << i+1 << ") orientation (in degree):" <<std::endl; 
+		// std::cout << "Target (" << i+1 << ") orientation (in degree):" <<std::endl; 
 		target_pos[i][3] = 0;
 		target_pos[i][4] = 0;
-		std::cout << "yaw_" << i+1 << ":"; std::cin >> target_pos[i][5];
+		target_pos[i][5] = 0;
+		// std::cout << "yaw_" << i+1 << ":"; std::cin >> target_pos[i][5];
 	}
 }
-
-/****************************************************************************************/
-/***** input_global_target: input the GPS [latitude, longitude, altitude] point(s) ******/
-/****************************************************************************************/
-// void input_global_target()
-// {
-// 	std::cout << "Input GPS position" << std::endl;
-// 	std::cout << "Latitude  (degree):"; std::cin >> latitude;
-// 	std::cout << "Longitude (degree):"; std::cin >> longitude;
-// 	std::cout << "Altitude  (meter) :"; std::cin >> altitude;
-// }
 
 void input_global_target()
 {
@@ -227,33 +258,46 @@ void input_global_target()
 	}
 }
 
-/**********************************************************/
-/***** degree: convert angle from radian to degree ******/
-/**********************************************************/
+void input_target()
+{
+	char c;
+	std::cout << "Waypoint type: (1) Local || (2) Global ? (1/2) \n"; std::cin >> c;
+	if (c == '1')
+	{
+		input_local_target();
+		input_type = true;
+	}
+	else if (c == '2')
+	{
+		input_global_target();
+		input_type = false;
+	}
+	else 
+	{
+		input_target();
+	}
+}
+
 double degree(double rad)
 {
 	double radian_to_degree = (rad*180)/PI;
 	return radian_to_degree;
 }
 
-/**********************************************************/
-/***** radian: convert angle from degree to radian ******/
-/**********************************************************/
 double radian(double deg)
 {
 	double degree_to_radian = (deg*PI)/180;
 	return degree_to_radian;
 }
 
-/*********************************************************************************************/
-/***** measureGPS: measure the distance between 2 GPS points that use haversine formula ******/
-/*********************************************************************************************/
-double measureGPS(double lat1, double lon1, double alt1, double lat2, double lon2, double alt2)
+double measureGPS(double lat1, double lon1, double alt1, 
+				  double lat2, double lon2, double alt2)
 {
 	double flat, plus, Distance;
 	lat1 = radian(lat1); lon1 = radian(lon1);
 	lat2 = radian(lat2); lon2 = radian(lon2);
-	flat = 2*eR*asin(sqrt(sin((lat2-lat1)/2)*sin((lat2-lat1)/2)+cos(lat1)*cos(lat2)*sin((lon2-lon1)/2)*sin((lon2-lon1)/2)))*1000; //m
+	flat = 2*eR*asin(sqrt(sin((lat2-lat1)/2)*sin((lat2-lat1)/2)
+	       +cos(lat1)*cos(lat2)*sin((lon2-lon1)/2)*sin((lon2-lon1)/2)))*1000; //m
 	if (alt1 == alt2)
 	{
 		Distance = flat;
@@ -263,13 +307,30 @@ double measureGPS(double lat1, double lon1, double alt1, double lat2, double lon
 		if 	(alt1 > alt2)
 		{
 			plus = flat/((alt1/alt2)-1);
-			Distance = sqrt((flat+plus)*(flat+plus) + alt1*alt1) - sqrt(plus*plus + alt2*alt2);
+			Distance = sqrt((flat+plus)*(flat+plus) + alt1*alt1) 
+					   - sqrt(plus*plus + alt2*alt2);
 		}
 		else
 		{
 			plus = flat/((alt2/alt1)-1);
-			Distance = sqrt((flat+plus)*(flat+plus) + alt2*alt2) - sqrt(plus*plus + alt1*alt1);
+			Distance = sqrt((flat+plus)*(flat+plus) + alt2*alt2) 
+					   - sqrt(plus*plus + alt1*alt1);
 		}
 	}
 	return Distance;
+}
+
+void files(std::string name, double x, double y, double z,
+						double lat, double lon, double alt)
+{
+	std::fstream file;
+	name = name + ".yaml";
+	file.open(name, std::ios::app);
+	if (file.is_open())
+	{
+		file << "Local : " << x << ", " << y << ", " << z << std::endl;
+		file << "Global: " << lat << ", " << lon << ", " << alt << std::endl;
+		file.close();
+	}
+	else std::cout << "Unable to open file \n";
 }

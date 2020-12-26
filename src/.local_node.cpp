@@ -3,7 +3,7 @@
 int main(int argc, char **argv)
 {
     // initialize ros node
-    ros::init(argc, argv, "offboard");
+    ros::init(argc, argv, "local");
     ros::NodeHandle nh;
 
     // subscriber
@@ -149,7 +149,20 @@ int main(int argc, char **argv)
         }
 		
 		// check when drone reached target      
-		bool check = check_position() && check_orientation();
+		bool check = check_position(target_pose.pose.position.x,
+                                    target_pose.pose.position.y,
+                                    target_pose.pose.position.z,
+                                    current_pose.pose.position.x,
+                                    current_pose.pose.position.y,
+                                    current_pose.pose.position.z) 
+               && check_orientation(target_pose.pose.orientation.x,
+                                    target_pose.pose.orientation.y,
+                                    target_pose.pose.orientation.z,
+                                    target_pose.pose.orientation.w,
+                                    current_pose.pose.orientation.x,
+                                    current_pose.pose.orientation.y,
+                                    current_pose.pose.orientation.z,
+                                    current_pose.pose.orientation.w);
 		std::cout << check << std::endl;
 		if(check)
 		{

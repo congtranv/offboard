@@ -118,6 +118,7 @@ double goal_pos[10][3]; // global setpoints list
 double latitude, longitude, altitude, distance;
 
 bool input_type = true; // true == input local || false == input global setpoints
+bool final_check = false; // true == reached final point || false == NOT final point
 float batt_percent; // baterry capacity
 
 /****** FUNCTIONS ******/

@@ -76,11 +76,11 @@ int main(int argc, char **argv)
                      refpoint.latitude, 
                      refpoint.longitude, 
                      refpoint.altitude);
-    ros::Duration(1).sleep();
+    ros::Duration(2).sleep();
 
     // set target pose
     input_target();
-    if (input_type == true) // local setpoint
+    if (input_type == true)
     {
         target_pose.pose.position.x = target_pos[0][0];
         target_pose.pose.position.y = target_pos[0][1];
@@ -91,7 +91,7 @@ int main(int argc, char **argv)
         q.setRPY(roll, pitch, yaw);
 	    tf::quaternionTFToMsg(q, target_pose.pose.orientation);
     }
-    else // global setpoint
+    else
     {
         enu_goal = WGS84ToENU(goal_pos[0][0], goal_pos[0][1], goal_pos[0][2],
                     refpoint.latitude, refpoint.longitude, refpoint.altitude);
@@ -119,10 +119,10 @@ int main(int argc, char **argv)
     std::cout << "[ INFO] Ready to switch ARM and OFFBOARD \n";
     ros::Duration(2).sleep();
 
-    if (input_type == true) // local setpoint
+    int i=0;
+    while(ros::ok())
     {
-        int i = 0;
-        while (ros::ok())
+        if (input_type == true)
         {
             std::printf("Current local position: [%.3f, %.3f, %.3f]\n", 
                      current_pose.pose.position.x, 
@@ -134,7 +134,6 @@ int main(int argc, char **argv)
 
             if (i < (target_num -1))
             {
-                final_check = false;
                 target_pose.pose.position.x = target_pos[i][0];
                 target_pose.pose.position.y = target_pos[i][1];
                 target_pose.pose.position.z = target_pos[i][2];
@@ -148,36 +147,17 @@ int main(int argc, char **argv)
                 local_pos_pub.publish(target_pose);
     			ros::spinOnce();
             	rate.sleep();
-            }
-            else
-            {
-                final_check = true;
-                target_pose.pose.position.x = target_pos[target_num - 1][0];
-                target_pose.pose.position.y = target_pos[target_num - 1][1];
-                target_pose.pose.position.z = target_pos[target_num - 1][2];
-                roll  = radian(target_pos[target_num - 1][3]);
-                pitch = radian(target_pos[target_num - 1][4]);
-                yaw   = radian(target_pos[target_num - 1][5]);
-                q.setRPY(roll, pitch, yaw);
-	            tf::quaternionTFToMsg(q, target_pose.pose.orientation);
 
-                target_pose.header.stamp = ros::Time::now();
-                local_pos_pub.publish(target_pose);
-    			ros::spinOnce();
-            	rate.sleep();
-            }
-
-            bool check = check_position(target_pose.pose.position.x,
-                                        target_pose.pose.position.y,
-                                        target_pose.pose.position.z,
-                                        current_pose.pose.position.x,
-                                        current_pose.pose.position.y,
-                                        current_pose.pose.position.z);
-    		std::cout << check << std::endl; 
-            if (check)
-            {
-                if (!final_check)
-                {
+                // check when drone reached target      
+		        bool check = check_position(target_pose.pose.position.x,
+                                            target_pose.pose.position.y,
+                                            target_pose.pose.position.z,
+                                            current_pose.pose.position.x,
+                                            current_pose.pose.position.y,
+                                            current_pose.pose.position.z);
+    		    std::cout << check << std::endl;
+	    	    if(check)
+    		    {
                     std::printf("Reached position: [%.3f, %.3f, %.3f]\n", 
                             current_pose.pose.position.x, 
                             current_pose.pose.position.y, 
@@ -190,11 +170,43 @@ int main(int argc, char **argv)
                     
                     ros::Duration(5).sleep();
 			        i = i + 1;
-                    ros::spinOnce();
+			        ros::spinOnce();
     		        rate.sleep();
-                }
-                else
-                {
+		        }
+	    	    else 
+    		    {
+			        continue;
+		    	    ros::spinOnce();
+    	    	    rate.sleep();
+    		    }
+            }
+            else
+            {
+                target_pose.pose.position.x = target_pos[target_num - 1][0];
+                target_pose.pose.position.y = target_pos[target_num - 1][1];
+                target_pose.pose.position.z = target_pos[target_num - 1][2];
+                roll  = radian(target_pos[target_num - 1][3]);
+                pitch = radian(target_pos[target_num - 1][4]);
+                yaw   = radian(target_pos[target_num - 1][5]);
+                q.setRPY(roll, pitch, yaw);
+	            tf::quaternionTFToMsg(q, target_pose.pose.orientation);
+            
+                target_pose.header.stamp = ros::Time::now();
+                local_pos_pub.publish(target_pose);
+	        
+			    ros::spinOnce();
+            	rate.sleep();
+
+                // check when drone reached target      
+		        bool check = check_position(target_pose.pose.position.x,
+                                            target_pose.pose.position.y,
+                                            target_pose.pose.position.z,
+                                            current_pose.pose.position.x,
+                                            current_pose.pose.position.y,
+                                            current_pose.pose.position.z);
+    		    std::cout << check << std::endl;
+	    	    if(check)
+    		    {
                     std::printf("Reached final position: [%.3f, %.3f, %.3f]\n", 
                             current_pose.pose.position.x, 
                             current_pose.pose.position.y, 
@@ -212,26 +224,16 @@ int main(int argc, char **argv)
     	                break;
                     }
 			        break;
-                    ros::spinOnce();
-    		        rate.sleep();
-                }
-                
+		        }
+	    	    else 
+    		    {
+			        continue;
+		    	    ros::spinOnce();
+    	    	    rate.sleep();
+    		    }
             }
-            else
-            {
-                continue;
-                ros::spinOnce();
-                rate.sleep();
-            }
-
-            ros::spinOnce();
-            rate.sleep();
         }
-    }
-    else // glocal setpoint
-    {
-        int i = 0;
-        while (ros::ok())
+        else
         {
             std::printf("Current GPS position: [%f, %f, %.3f]\n", 
                      global_position.latitude, 
@@ -242,7 +244,6 @@ int main(int argc, char **argv)
 
             if (i < (goal_num - 1))
             {
-                final_check = false;
                 enu_goal = WGS84ToENU(goal_pos[i][0], goal_pos[i][1], goal_pos[i][2],
                             refpoint.latitude, refpoint.longitude, refpoint.altitude);
                 target_pose.pose.position.x = enu_goal.x;
@@ -264,10 +265,44 @@ int main(int argc, char **argv)
 
                 ros::spinOnce();
                 rate.sleep();
+
+                // check GPS reached
+                enu_curr = WGS84ToENU(global_position.latitude,
+                                      global_position.longitude,
+                                      global_position.altitude,
+                        refpoint.latitude, refpoint.longitude, refpoint.altitude);
+                bool check = check_position(enu_goal.x, enu_goal.y, enu_goal.z,
+                                            enu_curr.x, enu_curr.y, enu_curr.z);
+                std::cout << check << std::endl;
+		        if(check)
+		        {
+                    std::printf("Reached position: [%f, %f, %.3f]\n", 
+                            global_position.latitude, 
+                            global_position.longitude, 
+                            global_position.altitude);
+                    files("setpoint", enu_curr.x, enu_curr.y, enu_curr.z,
+                                global_position.latitude, 
+                                global_position.longitude,
+                                global_position.altitude);
+                    files("setpoint", 0, 0, 0, 0, 0, 0);
+                    std::printf("Next position: [%f, %f, %.3f]\n", 
+                                goal_pos[i+1][0], 
+                                goal_pos[i+1][1],
+                                goal_pos[i+1][2]);
+                    ros::Duration(5).sleep();
+			        i = i + 1;
+	    		    ros::spinOnce();
+    		        rate.sleep();
+		        }
+		        else 
+		        {
+    			    continue;
+			        ros::spinOnce();
+    		        rate.sleep();
+		        }
             }
             else
             {
-                final_check = true;
                 distance = measureGPS(global_position.latitude, 
                                       global_position.longitude, 
                                       global_position.altitude, 
@@ -293,42 +328,17 @@ int main(int argc, char **argv)
             
                 ros::spinOnce();
                 rate.sleep();
-            }
 
-            enu_curr = WGS84ToENU(global_position.latitude,
-                                  global_position.longitude,
-                                  global_position.altitude,
-                                  refpoint.latitude, 
-                                  refpoint.longitude, 
-                                  refpoint.altitude);
-            bool check = check_position(enu_goal.x, enu_goal.y, enu_goal.z,
-                                        enu_curr.x, enu_curr.y, enu_curr.z);
-            std::cout << check << std::endl;
-            if (check)
-            {
-                if (!final_check)
-                {
-                    std::printf("Reached position: [%f, %f, %.3f]\n", 
-                            global_position.latitude, 
-                            global_position.longitude, 
-                            global_position.altitude);
-                    files("setpoint", enu_curr.x, enu_curr.y, enu_curr.z,
-                                global_position.latitude, 
-                                global_position.longitude,
-                                global_position.altitude);
-                    files("setpoint", 0, 0, 0, 0, 0, 0);
-                    std::printf("Next position: [%f, %f, %.3f]\n", 
-                                goal_pos[i+1][0], 
-                                goal_pos[i+1][1],
-                                goal_pos[i+1][2]);
-
-                    ros::Duration(5).sleep();
-			        i = i + 1;
-	    		    ros::spinOnce();
-    		        rate.sleep();
-                }
-                else
-                {
+                // check GPS reached
+                enu_curr = WGS84ToENU(global_position.latitude,
+                                      global_position.longitude,
+                                      global_position.altitude,
+                        refpoint.latitude, refpoint.longitude, refpoint.altitude);
+                bool check = check_position(enu_goal.x, enu_goal.y, enu_goal.z,
+                                            enu_curr.x, enu_curr.y, enu_curr.z);
+                std::cout << check << std::endl;
+		        if(check)
+		        {
                     std::printf("Reached final position: [%f, %f, %.3f]\n", 
                             global_position.latitude, 
                             global_position.longitude, 
@@ -350,21 +360,18 @@ int main(int argc, char **argv)
     	                break;
                     }
 	    		    break;
-                    ros::spinOnce();
+		        }
+		        else 
+		        {
+    			    continue;
+			        ros::spinOnce();
     		        rate.sleep();
-                }
-                
-            }
-            else
-            {
-                continue;
-                ros::spinOnce();
-                rate.sleep();
-            }
-
-            ros::spinOnce();
-            rate.sleep();
+		        }
+            }        
         }
+		
+        ros::spinOnce();
+        rate.sleep();
     }
 
     return 0;

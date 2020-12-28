@@ -215,6 +215,8 @@ int main(int argc, char **argv)
                     ros::spinOnce();
     		        rate.sleep();
                 }
+                ros::spinOnce();
+    		    rate.sleep();
                 
             }
             else
@@ -227,6 +229,8 @@ int main(int argc, char **argv)
             ros::spinOnce();
             rate.sleep();
         }
+        ros::spinOnce();
+    	rate.sleep();
     }
     else // glocal setpoint
     {
@@ -312,11 +316,11 @@ int main(int argc, char **argv)
                             global_position.latitude, 
                             global_position.longitude, 
                             global_position.altitude);
-                    files("setpoint", enu_curr.x, enu_curr.y, enu_curr.z,
-                                global_position.latitude, 
-                                global_position.longitude,
-                                global_position.altitude);
-                    files("setpoint", 0, 0, 0, 0, 0, 0);
+                    // files("setpoint", enu_curr.x, enu_curr.y, enu_curr.z,
+                    //             global_position.latitude, 
+                    //             global_position.longitude,
+                    //             global_position.altitude);
+                    // files("setpoint", 0, 0, 0, 0, 0, 0);
                     std::printf("Next position: [%f, %f, %.3f]\n", 
                                 goal_pos[i+1][0], 
                                 goal_pos[i+1][1],
@@ -333,11 +337,11 @@ int main(int argc, char **argv)
                             global_position.latitude, 
                             global_position.longitude, 
                             global_position.altitude);
-                    files("setpoint", enu_curr.x, enu_curr.y, enu_curr.z,
-                                global_position.latitude, 
-                                global_position.longitude,
-                                global_position.altitude);
-                    files("setpoint", 0, 0, 0, 0, 0, 0);
+                    // files("setpoint", enu_curr.x, enu_curr.y, enu_curr.z,
+                    //             global_position.latitude, 
+                    //             global_position.longitude,
+                    //             global_position.altitude);
+                    // files("setpoint", 0, 0, 0, 0, 0, 0);
                     std::printf("Ready to landing \n");
                     ros::Duration(5).sleep();
 
@@ -353,7 +357,8 @@ int main(int argc, char **argv)
                     ros::spinOnce();
     		        rate.sleep();
                 }
-                
+                ros::spinOnce();
+    		    rate.sleep();
             }
             else
             {
@@ -365,7 +370,11 @@ int main(int argc, char **argv)
             ros::spinOnce();
             rate.sleep();
         }
+        ros::spinOnce();
+    	rate.sleep();
     }
+    ros::spinOnce();
+    rate.sleep();
 
     return 0;
 }

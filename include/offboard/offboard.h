@@ -90,8 +90,8 @@ double measureGPS(double, double, double, double, double, double);
 /***** a file in format .yaml. save to the working directory ******/
 /***** input: "name of file", x, y, z, lat, lon, alt         ******/
 /******************************************************************/
-void files(std::string, double, double, double,
-						double, double, double);
+void files(double, double, double,
+		   double, double, double);
 
 /****** DECLARE VARIANTS ******/
 mavros_msgs::State current_state;
@@ -299,6 +299,8 @@ double measureGPS(double lat1, double lon1, double alt1,
 	lat2 = radian(lat2); lon2 = radian(lon2);
 	flat = 2*eR*asin(sqrt(sin((lat2-lat1)/2)*sin((lat2-lat1)/2)
 	       +cos(lat1)*cos(lat2)*sin((lon2-lon1)/2)*sin((lon2-lon1)/2)))*1000; //m
+	alt1 = abs(alt1);
+	alt2 = abs(alt2);
 	if (alt1 == alt2)
 	{
 		Distance = flat;
@@ -321,12 +323,12 @@ double measureGPS(double lat1, double lon1, double alt1,
 	return Distance;
 }
 
-void files(std::string name, double x, double y, double z,
-						double lat, double lon, double alt)
+void files(double x, double y, double z,
+		   double lat, double lon, double alt)
 {
 	std::fstream file;
-	name = name + ".yaml";
-	file.open(name, std::ios::app);
+	// std::ofstream file;
+	file.open("data_test.yaml", std::ios::app);
 	if (file.is_open())
 	{
 		file << "Local : " << x << ", " << y << ", " << z << std::endl;

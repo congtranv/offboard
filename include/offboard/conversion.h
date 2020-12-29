@@ -47,8 +47,8 @@ geometry_msgs::Point WGS84ToENU(double, double, double, double, double, double);
 geographic_msgs::GeoPoint ENUToWGS84(double, double, double, double, double, double);
 
 // VARIANTS 
-geometry_msgs::PoseStamped goal_pose; //Local goal position setpoint
 geometry_msgs::Point enu_goal, enu_curr; //Local ENU points: converted from GPS goal and current
+geographic_msgs::GeoPoint wgs84_target, wgs84_curr; //Global WGS84 point: convert from ENU target and current
 geographic_msgs::GeoPoint refpoint; //Reference point to convert ECEF to ENU and vice versa
 
 geometry_msgs::Point WGS84ToECEF(double lat, double lon, double alt)

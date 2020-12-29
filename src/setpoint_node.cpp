@@ -126,9 +126,10 @@ int main(int argc, char **argv)
                      current_pose.pose.position.x, 
                      current_pose.pose.position.y, 
                      current_pose.pose.position.z);
-    		
-        batt_percent = current_batt.percentage * 100;
-        std::printf("Current Battery capacity: %.1f \n", batt_percent);
+        std::printf("Next local position: [%.3f, %.3f, %.3f]\n", 
+                            target_pos[i][0], 
+                            target_pos[i][1],
+                            target_pos[i][2]);
 
         if (i < (target_num -1))
         {
@@ -173,16 +174,31 @@ int main(int argc, char **argv)
         std::cout << check << std::endl;
 		if(check && !final_check)
 		{
-            std::printf("Reached position: [%.3f, %.3f, %.3f]\n", 
+            std::printf("[ INFO] Reached position: [%.3f, %.3f, %.3f]\n", 
                             current_pose.pose.position.x, 
                             current_pose.pose.position.y, 
                             current_pose.pose.position.z);
     		        
-            std::printf("Next position: [%.3f, %.3f, %.3f]\n", 
+            std::printf("Next local position: [%.3f, %.3f, %.3f]\n", 
                             target_pos[i+1][0], 
                             target_pos[i+1][1],
                             target_pos[i+1][2]);
-
+            wgs84_curr = ENUToWGS84(current_pose.pose.position.x, 
+                                    current_pose.pose.position.y,
+                                    current_pose.pose.position.z,
+                                    refpoint.latitude,
+                                    refpoint.longitude,
+                                    refpoint.altitude);
+            files(current_pose.pose.position.x,
+                  current_pose.pose.position.y,
+                  current_pose.pose.position.z,
+                  wgs84_curr.latitude,
+                  wgs84_curr.longitude,
+                  wgs84_curr.altitude);
+            files(0, 0, 0,
+                  global_position.latitude,
+                  global_position.longitude,
+                  global_position.altitude);
             ros::Duration(5).sleep();
 			i = i + 1;
 			ros::spinOnce();
@@ -190,12 +206,28 @@ int main(int argc, char **argv)
 		}
         else if (check && final_check)
         {
-            std::printf("Reached final position: [%.3f, %.3f, %.3f]\n", 
+            std::printf("[ INFO] Reached FINAL position: [%.3f, %.3f, %.3f]\n", 
                             current_pose.pose.position.x, 
                             current_pose.pose.position.y, 
                             current_pose.pose.position.z);
     		        
-            std::printf("Ready to landing \n");
+            std::printf("[ INFO] Ready to LANDING \n");
+            wgs84_curr = ENUToWGS84(current_pose.pose.position.x, 
+                                    current_pose.pose.position.y,
+                                    current_pose.pose.position.z,
+                                    refpoint.latitude,
+                                    refpoint.longitude,
+                                    refpoint.altitude);
+            files(current_pose.pose.position.x,
+                  current_pose.pose.position.y,
+                  current_pose.pose.position.z,
+                  wgs84_curr.latitude,
+                  wgs84_curr.longitude,
+                  wgs84_curr.altitude);
+            files(0, 0, 0,
+                  global_position.latitude,
+                  global_position.longitude,
+                  global_position.altitude);
             ros::Duration(5).sleep();
 
 			set_mode.request.custom_mode = "AUTO.LAND";
@@ -222,9 +254,16 @@ int main(int argc, char **argv)
                      global_position.latitude, 
                      global_position.longitude, 
                      global_position.altitude);
-        batt_percent = current_batt.percentage * 100;
-        std::printf("Current Battery capacity: %.1f \n", batt_percent);
-
+        std::printf("Next GPS position: [%f, %f, %.3f]\n", 
+                            goal_pos[i+1][0], 
+                            goal_pos[i+1][1],
+                            goal_pos[i+1][2]);
+        distance = measureGPS(global_position.latitude, 
+                              global_position.longitude, 
+                              global_position.altitude, 
+                              goal_pos[i][0], goal_pos[i][1], goal_pos[i][2]);
+        std::printf("Distance to next goal: %.2f m \n", distance);
+        
         if (i < (goal_num - 1))
         {
             final_check = false;
@@ -241,11 +280,11 @@ int main(int argc, char **argv)
             target_pose.header.stamp = ros::Time::now();
             local_pos_pub.publish(target_pose);
             
-            distance = measureGPS(global_position.latitude, 
-                                  global_position.longitude, 
-                                  global_position.altitude, 
-                                  goal_pos[i][0], goal_pos[i][1], goal_pos[i][2]);
-            std::printf("Distance to next goal: %.2f m \n", distance);
+            // distance = measureGPS(global_position.latitude, 
+            //                       global_position.longitude, 
+            //                       global_position.altitude, 
+            //                       goal_pos[i][0], goal_pos[i][1], goal_pos[i][2]);
+            // std::printf("Distance to next goal: %.2f m \n", distance);
 
             ros::spinOnce();
             rate.sleep();
@@ -253,13 +292,13 @@ int main(int argc, char **argv)
         else
         {
             final_check = true;
-            distance = measureGPS(global_position.latitude, 
-                                  global_position.longitude, 
-                                  global_position.altitude, 
-                                  goal_pos[goal_num - 1][0], 
-                                  goal_pos[goal_num - 1][1], 
-                                  goal_pos[goal_num - 1][2]);
-            std::printf("Distance to next goal: %.2f m \n", distance);
+            // distance = measureGPS(global_position.latitude, 
+            //                       global_position.longitude, 
+            //                       global_position.altitude, 
+            //                       goal_pos[goal_num - 1][0], 
+            //                       goal_pos[goal_num - 1][1], 
+            //                       goal_pos[goal_num - 1][2]);
+            // std::printf("Distance to next goal: %.2f m \n", distance);
 
             enu_goal = WGS84ToENU(goal_pos[goal_num-1][0], 
                                   goal_pos[goal_num-1][1], 
@@ -290,15 +329,24 @@ int main(int argc, char **argv)
         std::cout << check << std::endl;
         if (check && !final_check)
         {
-            std::printf("Reached position: [%f, %f, %.3f]\n", 
+            std::printf("[ INFO] Reached position: [%f, %f, %.3f]\n", 
                             global_position.latitude, 
                             global_position.longitude, 
                             global_position.altitude);
-            std::printf("Next position: [%f, %f, %.3f]\n", 
+            std::printf("Next GPS position: [%f, %f, %.3f]\n", 
                             goal_pos[i+1][0], 
                             goal_pos[i+1][1],
                             goal_pos[i+1][2]);
-
+            files(enu_curr.x, enu_curr.y, enu_curr.z, 
+                  global_position.latitude,
+                  global_position.longitude,
+                  global_position.altitude);
+            files(current_pose.pose.position.x, 
+                  current_pose.pose.position.y, 
+                  current_pose.pose.position.z, 
+                    0,
+                    0,
+                    0);
             ros::Duration(5).sleep();
 			i = i + 1;
 	    	ros::spinOnce();
@@ -306,11 +354,21 @@ int main(int argc, char **argv)
         }
         else if (check && final_check)
         {
-            std::printf("Reached final position: [%f, %f, %.3f]\n", 
+            std::printf("[ INFO] Reached FINAL position: [%f, %f, %.3f]\n", 
                             global_position.latitude, 
                             global_position.longitude, 
                             global_position.altitude);
-            std::printf("Ready to landing \n");
+            std::printf("[ INFO] Ready to LANDING \n");
+            files(enu_curr.x, enu_curr.y, enu_curr.z, 
+                  global_position.latitude,
+                  global_position.longitude,
+                  global_position.altitude);
+            files(current_pose.pose.position.x, 
+                  current_pose.pose.position.y, 
+                  current_pose.pose.position.z, 
+                    0,
+                    0,
+                    0);
             ros::Duration(5).sleep();
 
 			set_mode.request.custom_mode = "AUTO.LAND";

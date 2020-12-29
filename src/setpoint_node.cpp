@@ -248,6 +248,7 @@ int main(int argc, char **argv)
         rate.sleep();
     }
 
+    i = 0;
     while (ros::ok() && (input_type == false))
     {
         std::printf("Current GPS position: [%f, %f, %.3f]\n", 
@@ -255,9 +256,9 @@ int main(int argc, char **argv)
                      global_position.longitude, 
                      global_position.altitude);
         std::printf("Next GPS position: [%f, %f, %.3f]\n", 
-                            goal_pos[i+1][0], 
-                            goal_pos[i+1][1],
-                            goal_pos[i+1][2]);
+                            goal_pos[i][0], 
+                            goal_pos[i][1],
+                            goal_pos[i][2]);
         distance = measureGPS(global_position.latitude, 
                               global_position.longitude, 
                               global_position.altitude, 

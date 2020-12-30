@@ -1,4 +1,4 @@
-#include "offboard/conversion.h"
+#include "offboard/offboard.h"
 
 int main(int argc, char **argv)
 {
@@ -10,7 +10,7 @@ int main(int argc, char **argv)
     ros::Subscriber state_sub = nh.subscribe<mavros_msgs::State>
             ("mavros/state", 10, state_cb);
     ros::Subscriber local_pose_sub = nh.subscribe<geometry_msgs::PoseStamped>
-            ("mavros/local_position/pose", 10, pose_cb);
+            ("mavros/local_position/pose", 10, localPose_cb);
     ros::Subscriber global_pos_sub = nh.subscribe<sensor_msgs::NavSatFix> 
             ("mavros/global_position/global", 10, globalPosition_cb);
     ros::Subscriber batt_sub = nh.subscribe<sensor_msgs::BatteryState> 
@@ -44,9 +44,8 @@ int main(int argc, char **argv)
         rate.sleep();
     }
     std::cout << "[ INFO] GPS position received \n";
-    ros::Duration(1).sleep();
     std::cout << "[ INFO] Checking status...\n";
-    ros::Duration(2).sleep();
+    ros::Duration(1).sleep();
 
 	// check current pose
 	for(int i = 100; ros::ok() && i > 0; --i)
@@ -76,7 +75,13 @@ int main(int argc, char **argv)
                      refpoint.latitude, 
                      refpoint.longitude, 
                      refpoint.altitude);
-    ros::Duration(1).sleep();
+    creates("reference", current_pose.pose.position.x,
+                        current_pose.pose.position.y,
+                        current_pose.pose.position.z,
+                        refpoint.latitude,
+                        refpoint.longitude,
+                        refpoint.altitude);
+    // ros::Duration(1).sleep();
 
     // set target pose
     input_target();
@@ -106,7 +111,7 @@ int main(int argc, char **argv)
     }
 
     std::cout << "[ INFO] Setting OFFBOARD stream...\n";
-    ros::Duration(1).sleep();
+    // ros::Duration(1).sleep();
     // send a few setpoints before starting
     for(int i = 100; ros::ok() && i > 0; --i)
     {
@@ -117,7 +122,13 @@ int main(int argc, char **argv)
     }
     std::cout << "[ INFO] Set OFFBOARD stream done \n";
     std::cout << "[ INFO] Ready to switch ARM and OFFBOARD \n";
-    ros::Duration(2).sleep();
+    // ros::Duration(1).sleep();
+    updates("pre-flight", current_pose.pose.position.x,
+                          current_pose.pose.position.y,
+                          current_pose.pose.position.z,
+                          global_position.latitude,
+                          global_position.longitude,
+                          global_position.altitude);
 
     int i = 0;
     while (ros::ok() && (input_type ==true))
@@ -189,16 +200,12 @@ int main(int argc, char **argv)
                                     refpoint.latitude,
                                     refpoint.longitude,
                                     refpoint.altitude);
-            files(current_pose.pose.position.x,
-                  current_pose.pose.position.y,
-                  current_pose.pose.position.z,
-                  wgs84_curr.latitude,
-                  wgs84_curr.longitude,
-                  wgs84_curr.altitude);
-            files(0, 0, 0,
-                  global_position.latitude,
-                  global_position.longitude,
-                  global_position.altitude);
+            updates_check(i+1, current_pose.pose.position.x,
+                               current_pose.pose.position.y,
+                               current_pose.pose.position.z,
+                               global_position.latitude,
+                               global_position.longitude,
+                               global_position.altitude);
             ros::Duration(5).sleep();
 			i = i + 1;
 			ros::spinOnce();
@@ -218,16 +225,12 @@ int main(int argc, char **argv)
                                     refpoint.latitude,
                                     refpoint.longitude,
                                     refpoint.altitude);
-            files(current_pose.pose.position.x,
-                  current_pose.pose.position.y,
-                  current_pose.pose.position.z,
-                  wgs84_curr.latitude,
-                  wgs84_curr.longitude,
-                  wgs84_curr.altitude);
-            files(0, 0, 0,
-                  global_position.latitude,
-                  global_position.longitude,
-                  global_position.altitude);
+            updates_check(i+1, current_pose.pose.position.x,
+                               current_pose.pose.position.y,
+                               current_pose.pose.position.z,
+                               global_position.latitude,
+                               global_position.longitude,
+                               global_position.altitude);
             ros::Duration(5).sleep();
 
 			set_mode.request.custom_mode = "AUTO.LAND";
@@ -338,16 +341,12 @@ int main(int argc, char **argv)
                             goal_pos[i+1][0], 
                             goal_pos[i+1][1],
                             goal_pos[i+1][2]);
-            files(enu_curr.x, enu_curr.y, enu_curr.z, 
-                  global_position.latitude,
-                  global_position.longitude,
-                  global_position.altitude);
-            files(current_pose.pose.position.x, 
-                  current_pose.pose.position.y, 
-                  current_pose.pose.position.z, 
-                    0,
-                    0,
-                    0);
+            updates_check(i+1, current_pose.pose.position.x,
+                               current_pose.pose.position.y,
+                               current_pose.pose.position.z,
+                               global_position.latitude,
+                               global_position.longitude,
+                               global_position.altitude);
             ros::Duration(5).sleep();
 			i = i + 1;
 	    	ros::spinOnce();
@@ -360,16 +359,12 @@ int main(int argc, char **argv)
                             global_position.longitude, 
                             global_position.altitude);
             std::printf("[ INFO] Ready to LANDING \n");
-            files(enu_curr.x, enu_curr.y, enu_curr.z, 
-                  global_position.latitude,
-                  global_position.longitude,
-                  global_position.altitude);
-            files(current_pose.pose.position.x, 
-                  current_pose.pose.position.y, 
-                  current_pose.pose.position.z, 
-                    0,
-                    0,
-                    0);
+            updates_check(i+1, current_pose.pose.position.x,
+                               current_pose.pose.position.y,
+                               current_pose.pose.position.z,
+                               global_position.latitude,
+                               global_position.longitude,
+                               global_position.altitude);
             ros::Duration(5).sleep();
 
 			set_mode.request.custom_mode = "AUTO.LAND";

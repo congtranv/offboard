@@ -6,22 +6,40 @@
 #include <sensor_msgs/BatteryState.h>
 /******* local position *******/
 #include <geometry_msgs/PoseStamped.h>
-#include <geographic_msgs/GeoPoseStamped.h>
+#include <geometry_msgs/Point.h>
 /******* global position *******/
 #include <mavros_msgs/GlobalPositionTarget.h>
 #include <sensor_msgs/NavSatFix.h>
+#include <geographic_msgs/GeoPoseStamped.h>
+#include <geographic_msgs/GeoPoint.h>
 /******* tranformation *******/
 #include <tf/tf.h>
 #include <tf/transform_datatypes.h>
 /******* c++ *******/
-#include <iostream>
-#include <fstream>
-#include <cmath>
-#include <cstdio>
+// #include <iostream>
+// #include <cmath>
+// #include <cstdio>
+// #include <fstream>
+// #include <iomanip>
+#include "offboard/logs.h"
+
 
 /****** DEFINE CONSTANTS ******/
 const double PI  =3.141592653589793238463;
 const double eR  =6378.137; // earth radius in km
+
+const double a = 6378137.0;         // WGS-84 Earth semimajor axis (m)
+const double b = 6356752.314245;     // Derived Earth semiminor axis (m)
+const double f = (a - b) / a;           // Ellipsoid Flatness
+const double f_inv = 1.0 / f;       // Inverse flattening
+
+//const double f_inv = 298.257223563; // WGS-84 Flattening Factor of the Earth 
+//const double b = a - a / f_inv;
+//const double f = 1.0 / f_inv;
+
+const double a_sq = a * a;
+const double b_sq = b * b;
+const double e_sq = f * (2 - f);    // Square of Eccentricity
 
 /****** DEFINE FUNCTIONS ******/
 /********************************************************************************/
@@ -85,13 +103,42 @@ double radian(double);
 /*********************************************************************************************/
 double measureGPS(double, double, double, double, double, double);
 
-/******************************************************************/
-/***** files: write setpoint local and global positions into ******/
-/***** a file in format .yaml. save to the working directory ******/
-/***** input: "name of file", x, y, z, lat, lon, alt         ******/
-/******************************************************************/
-void files(double, double, double,
-		   double, double, double);
+/* WGS84ToECEF: Converts the WGS-84 Geodetic point (latitude, longitude, altitude) **
+** to Earth-Centered Earth-Fixed (ECEF) coordinates (x, y, z)                      **/
+geometry_msgs::Point WGS84ToECEF(double, double, double);
+
+/* ECEFToWGS84: Converts the Earth-Centered Earth-Fixed coordinates (x, y, z) to   **
+** WGS-84 Geodetic point (latitude, longitude, altitude)                           **/
+geographic_msgs::GeoPoint ECEFToWGS84(double, double, double);
+
+/* ECEFToENU: Converts the Earth-Centered Earth-Fixed (ECEF) coordinates (x, y, z) **
+** to East-North-Up coordinates in a Local Tangent Plane that is centered at the   **
+** (WGS-84) Geodetic point (lat0, lon0, alt0)                                      **/
+geometry_msgs::Point ECEFToENU(double, double, double, double, double, double);
+
+/* ENUToECEF: Converts East-North-Up coordinates (xEast, yNorth, zUp) in a Local   **
+** Tangent Plane that is centered at  (WGS-84) Geodetic point (lat0, lon0, alt0)   **
+** to the Earth-Centered Earth-Fixed (ECEF) coordinates (x, y, z)                  **/
+geometry_msgs::Point ENUToECEF(double, double, double, double, double, double);
+
+/* WGS84ToENU: Converts the geodetic WGS-84 coordinated (lat, lon, alt) to         **
+** East-North-Up coordinates in a Local Tangent Plane that is centered at the      **
+** (WGS-84) Geodetic point (lat0, lon0, alt0)                                      **/
+geometry_msgs::Point WGS84ToENU(double, double, double, double, double, double);
+
+/* ENUToWGS84: Converts the East-North-Up coordinates in a Local Tangent Plane to  **
+** geodetic WGS-84 coordinated (lat, lon, alt) that is centered at the (WGS-84)    **
+** Geodetic point (lat0, lon0, alt0)                                               **/
+geographic_msgs::GeoPoint ENUToWGS84(double, double, double, double, double, double);
+
+// void creates(std::string, double, double, double, 
+//             double, double, double);
+// void updates(std::string, double, double, double, 
+//                    double, double, double);
+// void updates_check(int, double, double, double, 
+//                    double, double, double);
+// void updates_local(int, double, double, double); 
+// void updates_global(int, double, double, double);
 
 /****** DECLARE VARIANTS ******/
 mavros_msgs::State current_state;
@@ -109,7 +156,7 @@ sensor_msgs::BatteryState current_batt;
 tf::Quaternion q; // quaternion to transform to RPY
 
 int target_num; // number of local setpoints
-float target_pos[10][7]; // local setpoints list
+double target_pos[10][7]; // local setpoints list
 double roll, pitch, yaw; // roll, pitch, yaw angle
 double r, p, y; // roll, pitch, yaw use in transform
 
@@ -121,7 +168,9 @@ bool input_type = true; // true == input local || false == input global setpoint
 bool final_check = false; // true == reached final point || false == NOT final point
 float batt_percent; // baterry capacity
 
-/****** FUNCTIONS ******/
+geometry_msgs::Point enu_goal, enu_curr; //Local ENU points: converted from GPS goal and current
+geographic_msgs::GeoPoint wgs84_target, wgs84_curr; //Global WGS84 point: convert from ENU target and current
+geographic_msgs::GeoPoint refpoint; //Reference point to convert ECEF to ENU and vice versa
 
 /***** callback functions *****/
 // state callback 
@@ -131,7 +180,7 @@ void state_cb(const mavros_msgs::State::ConstPtr& msg)
 }
 
 // local pose callback
-void pose_cb(const geometry_msgs::PoseStamped::ConstPtr& msg)
+void localPose_cb(const geometry_msgs::PoseStamped::ConstPtr& msg)
 {
     current_pose = *msg;
 }
@@ -150,7 +199,6 @@ void battery_cb(const sensor_msgs::BatteryState::ConstPtr& msg)
 }
 
 /***** executed functions *****/
-
 bool check_position(double target_x, double target_y, double target_z,
 					double currentx, double currenty, double currentz)
 {
@@ -237,7 +285,7 @@ void input_local_target()
 		std::cout << "pos_x_" << i+1 << ":"; std::cin >> target_pos[i][0];
 		std::cout << "pos_y_" << i+1 << ":"; std::cin >> target_pos[i][1];
 		std::cout << "pos_z_" << i+1 << ":"; std::cin >> target_pos[i][2];
-
+		updates_local(i, target_pos[i][0], target_pos[i][1], target_pos[i][2]);
 		// std::cout << "Target (" << i+1 << ") orientation (in degree):" <<std::endl; 
 		target_pos[i][3] = 0;
 		target_pos[i][4] = 0;
@@ -256,6 +304,7 @@ void input_global_target()
 		std::cout << "Latitude  " << i+1 << " (in degree): "; std::cin >> goal_pos[i][0];
 		std::cout << "Longitude " << i+1 << " (in degree): "; std::cin >> goal_pos[i][1];
 		std::cout << "Altitude  " << i+1 << "  (in meter): "; std::cin >> goal_pos[i][2];
+		updates_global(i, goal_pos[i][0], goal_pos[i][1], goal_pos[i][2]);
 	}
 }
 
@@ -323,17 +372,200 @@ double measureGPS(double lat1, double lon1, double alt1,
 	return Distance;
 }
 
-void files(double x, double y, double z,
-		   double lat, double lon, double alt)
+geometry_msgs::Point WGS84ToECEF(double lat, double lon, double alt)
 {
-	std::fstream file;
-	// std::ofstream file;
-	file.open("data_test.yaml", std::ios::app);
-	if (file.is_open())
-	{
-		file << "Local : " << x << ", " << y << ", " << z << std::endl;
-		file << "Global: " << lat << ", " << lon << ", " << alt << std::endl;
-		file.close();
-	}
-	else std::cout << "Unable to open file \n";
+    geometry_msgs::Point ecef;
+    double lambda = radian(lat);
+    double phi = radian(lon);
+    double s = sin(lambda);
+    double N = a / sqrt(1 - e_sq * s * s);
+
+    double sin_lambda = sin(lambda);
+    double cos_lambda = cos(lambda);
+    double cos_phi = cos(phi);
+    double sin_phi = sin(phi);
+
+    ecef.x = (alt + N) * cos_lambda * cos_phi;
+    ecef.y = (alt + N) * cos_lambda * sin_phi;
+    ecef.z = (alt + (1 - e_sq) * N) * sin_lambda;
+
+    return ecef;
 }
+
+geographic_msgs::GeoPoint ECEFToWGS84(double x, double y, double z)
+{
+    geographic_msgs::GeoPoint wgs84;
+    double eps = e_sq / (1.0 - e_sq);
+    double p = sqrt(x * x + y * y);
+    double q = atan2((z * a), (p * b));
+    double sin_q = sin(q);
+    double cos_q = cos(q);
+    double sin_q_3 = sin_q * sin_q * sin_q;
+    double cos_q_3 = cos_q * cos_q * cos_q;
+    double phi = atan2((z + eps * b * sin_q_3), (p - e_sq * a * cos_q_3));
+    double lambda = atan2(y, x);
+    double v = a / sqrt(1.0 - e_sq * sin(phi) * sin(phi));
+    
+    wgs84.altitude = (p / cos(phi)) - v;
+
+    wgs84.latitude = degree(phi);
+    wgs84.longitude = degree(lambda);
+
+    return wgs84;
+}
+
+geometry_msgs::Point ECEFToENU(double x, double y, double z,
+                               double lat0, double lon0, double alt0)
+{
+    geometry_msgs::Point enu;
+    double lambda = radian(lat0);
+    double phi = radian(lon0);
+    double s = sin(lambda);
+    double N = a / sqrt(1 - e_sq * s * s);
+
+    double sin_lambda = sin(lambda);
+    double cos_lambda = cos(lambda);
+    double cos_phi = cos(phi);
+    double sin_phi = sin(phi);
+
+    double x0 = (alt0 + N) * cos_lambda * cos_phi;
+    double y0 = (alt0 + N) * cos_lambda * sin_phi;
+    double z0 = (alt0 + (1 - e_sq) * N) * sin_lambda;
+
+    double xd, yd, zd;
+    xd = x - x0;
+    yd = y - y0;
+    zd = z - z0;
+
+    enu.x = -sin_phi * xd + cos_phi * yd;
+    enu.y = -cos_phi * sin_lambda * xd - sin_lambda * sin_phi * yd + cos_lambda * zd;
+    enu.z = cos_lambda * cos_phi * xd + cos_lambda * sin_phi * yd + sin_lambda * zd;
+
+    return enu;
+}
+
+geometry_msgs::Point ENUToECEF(double xEast, double yNorth, double zUp,
+                                double lat0, double lon0, double alt0)
+{
+    geometry_msgs::Point ecef;
+    double lambda = radian(lat0);
+    double phi = radian(lon0);
+    double s = sin(lambda);
+    double N = a / sqrt(1 - e_sq * s * s);
+
+    double sin_lambda = sin(lambda);
+    double cos_lambda = cos(lambda);
+    double cos_phi = cos(phi);
+    double sin_phi = sin(phi);
+
+    double x0 = (alt0 + N) * cos_lambda * cos_phi;
+    double y0 = (alt0 + N) * cos_lambda * sin_phi;
+    double z0 = (alt0 + (1 - e_sq) * N) * sin_lambda;
+
+    double xd = -sin_phi * xEast - cos_phi * sin_lambda * yNorth + cos_lambda * cos_phi * zUp;
+    double yd = cos_phi * xEast - sin_lambda * sin_phi * yNorth + cos_lambda * sin_phi * zUp;
+    double zd = cos_lambda * yNorth + sin_lambda * zUp;
+
+    ecef.x = xd + x0;
+    ecef.y = yd + y0;
+    ecef.z = zd + z0;
+
+    return ecef;
+}
+
+geometry_msgs::Point WGS84ToENU(double lat, double lon, double alt,
+                                double lat0, double lon0, double alt0)
+{
+    geometry_msgs::Point ecef = WGS84ToECEF(lat, lon, alt);
+    geometry_msgs::Point enu = ECEFToENU(ecef.x, ecef.y, ecef.z,
+                                        lat0, lon0, alt0);
+    return enu;
+}
+
+geographic_msgs::GeoPoint ENUToWGS84(double xEast, double yNorth, double zUp,
+                                      double lat0, double lon0, double alt0)
+{
+    geometry_msgs::Point ecef = ENUToECEF(xEast, yNorth, zUp,
+                                          lat0, lon0, alt0);
+    geographic_msgs::GeoPoint wgs84 = ECEFToWGS84(ecef.x, ecef.y, ecef.z);
+
+    return wgs84;
+}
+
+// void creates(std::string name, double x_log, double y_log, double z_log, 
+//             double lat_log, double long_log, double alt_log) 
+// { 
+// 	std::fstream file; 
+
+// 	file.open("ivsr_logs.csv", std::ios::out | std::ios::app); 
+
+// 	file << ", , , , , , \n";
+//     file << "Point, x, y, z, lat, long, alt \n";
+//     file << name << ", " << std::fixed << std::setprecision(8) << x_log << ", " 
+// 						 << std::fixed << std::setprecision(8) << y_log << ", " 
+// 						 << std::fixed << std::setprecision(8) << z_log << ", "
+// 						 << std::fixed << std::setprecision(8) << lat_log << ", " 
+// 						 << std::fixed << std::setprecision(8) << long_log << ", " 
+// 						 << std::fixed << std::setprecision(8) << alt_log << "\n";
+	
+//     file.close(); 
+// } 
+
+// void updates(std::string name, double x_log, double y_log, double z_log, 
+//                    double lat_log, double long_log, double alt_log) 
+// { 
+// 	std::fstream file; 
+
+//     file.open("ivsr_logs.csv", std::ios::out | std::ios::app); 
+
+//     file << name << ", " << std::fixed << std::setprecision(8) << x_log << ", " 
+// 						 << std::fixed << std::setprecision(8) << y_log << ", " 
+// 						 << std::fixed << std::setprecision(8) << z_log << ", "
+// 						 << std::fixed << std::setprecision(8) << lat_log << ", " 
+// 						 << std::fixed << std::setprecision(8) << long_log << ", " 
+// 						 << std::fixed << std::setprecision(8) << alt_log << "\n";
+
+// 	file.close(); 
+// } 
+
+// void updates_check(int i, double x_log, double y_log, double z_log, 
+//                    double lat_log, double long_log, double alt_log) 
+// { 
+// 	std::fstream file; 
+
+//     file.open("ivsr_logs.csv", std::ios::out | std::ios::app); 
+
+//     file << "checkpoint " << i << ", " << std::fixed << std::setprecision(8) << x_log << ", " 
+// 									   << std::fixed << std::setprecision(8) << y_log << ", " 
+// 									   << std::fixed << std::setprecision(8) << z_log << ", "
+//          							   << std::fixed << std::setprecision(8) << lat_log << ", " 
+// 									   << std::fixed << std::setprecision(8) << long_log << ", " 
+// 									   << std::fixed << std::setprecision(8) << alt_log << "\n";
+
+// 	file.close(); 
+// } 
+
+// void updates_local(int num, double x, double y, double z) 
+// { 
+// 	std::fstream file; 
+
+//     file.open("ivsr_logs.csv", std::ios::out | std::ios::app); 
+
+//     file << "local target " << num << ", " << std::fixed << std::setprecision(8) << x << ", " 
+// 										   << std::fixed << std::setprecision(8) << y << ", " 
+// 										   << std::fixed << std::setprecision(8) << z << ", , , \n";
+// 	file.close();
+// } 
+
+// void updates_global(int num, double lat, double lon, double alt) 
+// { 
+// 	std::fstream file; 
+
+//     file.open("ivsr_logs.csv", std::ios::out | std::ios::app); 
+
+//     file << "global target " << num <<  ", , , , " << std::fixed << std::setprecision(8) << lat << ", " 
+// 												   << std::fixed << std::setprecision(8) << lon << ", " 
+// 												   << std::fixed << std::setprecision(8) << alt << "\n";
+
+// 	file.close();
+// }

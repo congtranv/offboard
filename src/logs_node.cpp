@@ -56,11 +56,11 @@ int main(int argc, char **argv)
     }
     std::cout << "[ INFO] Check status done \n";
     creates("initial", current_pose.pose.position.x,
-                        current_pose.pose.position.y,
-                        current_pose.pose.position.z,
-                        refpoint.latitude,
-                        refpoint.longitude,
-                        refpoint.altitude);
+                       current_pose.pose.position.y,
+                       current_pose.pose.position.z,
+                       global_position.latitude,
+                       global_position.longitude,
+                       global_position.altitude);
     while (ros::ok())
     {
         std::printf("\nCurrent local position: [%.3f, %.3f, %.3f]\n", 
@@ -72,13 +72,14 @@ int main(int argc, char **argv)
                      global_position.latitude, 
                      global_position.longitude, 
                      global_position.altitude);
+                     
         updates("flight", current_pose.pose.position.x,
                           current_pose.pose.position.y,
                           current_pose.pose.position.z,
                           global_position.latitude,
                           global_position.longitude,
                           global_position.altitude);
-        ros::Duration(5).sleep();
+        ros::Duration(1).sleep();
         ros::spinOnce();
         rate.sleep();
     }

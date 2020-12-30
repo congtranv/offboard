@@ -13,6 +13,8 @@ int main(int argc, char **argv)
             ("mavros/local_position/pose", 10, localPose_cb);
     ros::Subscriber global_pos_sub = nh.subscribe<sensor_msgs::NavSatFix> 
             ("mavros/global_position/global", 10, globalPosition_cb);
+    ros::Subscriber gps_pos_sub = nh.subscribe<mavros_msgs::GPSRAW> 
+            ("mavros/gpsstatus/gps1/raw", 10, gpsPosition_cb);
     ros::Subscriber batt_sub = nh.subscribe<sensor_msgs::BatteryState> 
             ("mavros/battery", 10, battery_cb);
 
@@ -37,7 +39,7 @@ int main(int argc, char **argv)
     std::cout << "[ INFO] FCU connected \n";
 
     // wait for GPS information
-    while (ros::ok() && !global_position_received) 
+    while (ros::ok() && !global_position_received && !gps_position_received) 
     {
         std::cout << "[ INFO] Waiting for GPS signal...\n";
         ros::spinOnce();
@@ -67,11 +69,16 @@ int main(int argc, char **argv)
         rate.sleep();
     }
     std::cout << "[ INFO] Check status done \n";
-        // init reference point
-        refpoint.latitude = global_position.latitude;
-        refpoint.longitude = global_position.longitude;
-        refpoint.altitude = global_position.altitude;
-        std::printf("Reference GPS position: [%f, %f, %.3f]\n", 
+    
+    gps_lat = double(gps_position.lat)/10000000;
+    gps_lon = double(gps_position.lon)/10000000;
+    gps_alt = double(gps_position.alt)/1000;
+
+    // init reference point
+    refpoint.latitude = global_position.latitude;
+    refpoint.longitude = global_position.longitude;
+    refpoint.altitude = global_position.altitude;
+    std::printf("Reference GPS position: [%f, %f, %.3f]\n", 
                      refpoint.latitude, 
                      refpoint.longitude, 
                      refpoint.altitude);
@@ -80,7 +87,8 @@ int main(int argc, char **argv)
                         current_pose.pose.position.z,
                         refpoint.latitude,
                         refpoint.longitude,
-                        refpoint.altitude);
+                        refpoint.altitude,
+                        gps_lat, gps_lon, gps_alt);
     // ros::Duration(1).sleep();
 
     // set target pose
@@ -123,12 +131,17 @@ int main(int argc, char **argv)
     std::cout << "[ INFO] Set OFFBOARD stream done \n";
     std::cout << "[ INFO] Ready to switch ARM and OFFBOARD \n";
     // ros::Duration(1).sleep();
+    gps_lat = double(gps_position.lat)/10000000;
+    gps_lon = double(gps_position.lon)/10000000;
+    gps_alt = double(gps_position.alt)/1000;
+
     updates("pre-flight", current_pose.pose.position.x,
                           current_pose.pose.position.y,
                           current_pose.pose.position.z,
                           global_position.latitude,
                           global_position.longitude,
-                          global_position.altitude);
+                          global_position.altitude,
+                          gps_lat, gps_lon, gps_alt);
 
     int i = 0;
     while (ros::ok() && (input_type ==true))
@@ -200,12 +213,16 @@ int main(int argc, char **argv)
                                     refpoint.latitude,
                                     refpoint.longitude,
                                     refpoint.altitude);
+            gps_lat = double(gps_position.lat)/10000000;
+            gps_lon = double(gps_position.lon)/10000000;
+            gps_alt = double(gps_position.alt)/1000;
             updates_check(i+1, current_pose.pose.position.x,
                                current_pose.pose.position.y,
                                current_pose.pose.position.z,
                                global_position.latitude,
                                global_position.longitude,
-                               global_position.altitude);
+                               global_position.altitude,
+                               gps_lat, gps_lon, gps_alt);
             ros::Duration(5).sleep();
 			i = i + 1;
 			ros::spinOnce();
@@ -225,12 +242,16 @@ int main(int argc, char **argv)
                                     refpoint.latitude,
                                     refpoint.longitude,
                                     refpoint.altitude);
+            gps_lat = double(gps_position.lat)/10000000;
+            gps_lon = double(gps_position.lon)/10000000;
+            gps_alt = double(gps_position.alt)/1000;
             updates_check(i+1, current_pose.pose.position.x,
                                current_pose.pose.position.y,
                                current_pose.pose.position.z,
                                global_position.latitude,
                                global_position.longitude,
-                               global_position.altitude);
+                               global_position.altitude,
+                               gps_lat, gps_lon, gps_alt);
             ros::Duration(5).sleep();
 
 			set_mode.request.custom_mode = "AUTO.LAND";
@@ -283,12 +304,6 @@ int main(int argc, char **argv)
 	        tf::quaternionTFToMsg(q, target_pose.pose.orientation);
             target_pose.header.stamp = ros::Time::now();
             local_pos_pub.publish(target_pose);
-            
-            // distance = measureGPS(global_position.latitude, 
-            //                       global_position.longitude, 
-            //                       global_position.altitude, 
-            //                       goal_pos[i][0], goal_pos[i][1], goal_pos[i][2]);
-            // std::printf("Distance to next goal: %.2f m \n", distance);
 
             ros::spinOnce();
             rate.sleep();
@@ -296,14 +311,6 @@ int main(int argc, char **argv)
         else
         {
             final_check = true;
-            // distance = measureGPS(global_position.latitude, 
-            //                       global_position.longitude, 
-            //                       global_position.altitude, 
-            //                       goal_pos[goal_num - 1][0], 
-            //                       goal_pos[goal_num - 1][1], 
-            //                       goal_pos[goal_num - 1][2]);
-            // std::printf("Distance to next goal: %.2f m \n", distance);
-
             enu_goal = WGS84ToENU(goal_pos[goal_num-1][0], 
                                   goal_pos[goal_num-1][1], 
                                   goal_pos[goal_num-1][2],
@@ -341,12 +348,16 @@ int main(int argc, char **argv)
                             goal_pos[i+1][0], 
                             goal_pos[i+1][1],
                             goal_pos[i+1][2]);
+            gps_lat = double(gps_position.lat)/10000000;
+            gps_lon = double(gps_position.lon)/10000000;
+            gps_alt = double(gps_position.alt)/1000;
             updates_check(i+1, current_pose.pose.position.x,
                                current_pose.pose.position.y,
                                current_pose.pose.position.z,
                                global_position.latitude,
                                global_position.longitude,
-                               global_position.altitude);
+                               global_position.altitude,
+                               gps_lat, gps_lon, gps_alt);
             ros::Duration(5).sleep();
 			i = i + 1;
 	    	ros::spinOnce();
@@ -359,12 +370,16 @@ int main(int argc, char **argv)
                             global_position.longitude, 
                             global_position.altitude);
             std::printf("[ INFO] Ready to LANDING \n");
+            gps_lat = double(gps_position.lat)/10000000;
+            gps_lon = double(gps_position.lon)/10000000;
+            gps_alt = double(gps_position.alt)/1000;
             updates_check(i+1, current_pose.pose.position.x,
                                current_pose.pose.position.y,
                                current_pose.pose.position.z,
                                global_position.latitude,
                                global_position.longitude,
-                               global_position.altitude);
+                               global_position.altitude,
+                               gps_lat, gps_lon, gps_alt);
             ros::Duration(5).sleep();
 
 			set_mode.request.custom_mode = "AUTO.LAND";

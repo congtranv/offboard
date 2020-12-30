@@ -13,6 +13,8 @@ int main(int argc, char **argv)
             ("mavros/local_position/pose", 10, localPose_cb);
     ros::Subscriber global_pos_sub = nh.subscribe<sensor_msgs::NavSatFix> 
             ("mavros/global_position/global", 10, globalPosition_cb);
+    ros::Subscriber gps_pos_sub = nh.subscribe<mavros_msgs::GPSRAW> 
+            ("mavros/gpsstatus/gps1/raw", 10, gpsPosition_cb);
     
     // the setpoint publishing rate MUST be faster than 2Hz
     ros::Rate rate(20.0);
@@ -27,7 +29,7 @@ int main(int argc, char **argv)
     std::cout << "[ INFO] FCU connected \n";
 
     // wait for GPS information
-    while (ros::ok() && !global_position_received) 
+    while (ros::ok() && !global_position_received && !gps_position_received) 
     {
         std::cout << "[ INFO] Waiting for GPS signal...\n";
         ros::spinOnce();
@@ -45,7 +47,7 @@ int main(int argc, char **argv)
                      current_pose.pose.position.y, 
                      current_pose.pose.position.z);
 		
-        std::printf("Current GPS position: [%f, %f, %.3f]\n", 
+        std::printf("Current global position: [%f, %f, %.3f]\n", 
                      global_position.latitude, 
                      global_position.longitude, 
                      global_position.altitude);
@@ -55,12 +57,17 @@ int main(int argc, char **argv)
         rate.sleep();
     }
     std::cout << "[ INFO] Check status done \n";
+
+    gps_lat = double(gps_position.lat)/10000000;
+    gps_lon = double(gps_position.lon)/10000000;
+    gps_alt = double(gps_position.alt)/1000;
     creates("initial", current_pose.pose.position.x,
                        current_pose.pose.position.y,
                        current_pose.pose.position.z,
                        global_position.latitude,
                        global_position.longitude,
-                       global_position.altitude);
+                       global_position.altitude,
+                       gps_lat, gps_lon, gps_alt);
     while (ros::ok())
     {
         std::printf("\nCurrent local position: [%.3f, %.3f, %.3f]\n", 
@@ -68,17 +75,22 @@ int main(int argc, char **argv)
                      current_pose.pose.position.y, 
                      current_pose.pose.position.z);
 		
-        std::printf("Current GPS position: [%f, %f, %.3f]\n", 
+        std::printf("Current global position: [%f, %f, %.3f]\n", 
                      global_position.latitude, 
                      global_position.longitude, 
                      global_position.altitude);
-                     
+
+        gps_lat = double(gps_position.lat)/10000000;
+        gps_lon = double(gps_position.lon)/10000000;
+        gps_alt = double(gps_position.alt)/1000;
+
         updates("flight", current_pose.pose.position.x,
                           current_pose.pose.position.y,
                           current_pose.pose.position.z,
                           global_position.latitude,
                           global_position.longitude,
-                          global_position.altitude);
+                          global_position.altitude,
+                          gps_lat, gps_lon, gps_alt);
         ros::Duration(1).sleep();
         ros::spinOnce();
         rate.sleep();

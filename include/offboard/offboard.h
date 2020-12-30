@@ -12,6 +12,8 @@
 #include <sensor_msgs/NavSatFix.h>
 #include <geographic_msgs/GeoPoseStamped.h>
 #include <geographic_msgs/GeoPoint.h>
+
+#include <mavros_msgs/GPSRAW.h>
 /******* tranformation *******/
 #include <tf/tf.h>
 #include <tf/transform_datatypes.h>
@@ -151,6 +153,10 @@ bool global_position_received = false;
 sensor_msgs::NavSatFix global_position;
 geographic_msgs::GeoPoseStamped goal_position;
 
+bool gps_position_received = false;
+mavros_msgs::GPSRAW gps_position;
+double gps_lat, gps_lon, gps_alt;
+
 sensor_msgs::BatteryState current_batt;
 
 tf::Quaternion q; // quaternion to transform to RPY
@@ -162,7 +168,7 @@ double r, p, y; // roll, pitch, yaw use in transform
 
 int goal_num; // number of global setpoints
 double goal_pos[10][3]; // global setpoints list
-double latitude, longitude, altitude, distance;
+double distance;
 
 bool input_type = true; // true == input local || false == input global setpoints
 bool final_check = false; // true == reached final point || false == NOT final point
@@ -190,6 +196,13 @@ void globalPosition_cb(const sensor_msgs::NavSatFix::ConstPtr& msg)
 {
     global_position = *msg;
     global_position_received = true;
+}
+
+// gps raw position callback
+void gpsPosition_cb(const mavros_msgs::GPSRAW::ConstPtr& msg) 
+{
+    gps_position = *msg;
+	gps_position_received = true;
 }
 
 // battery status callback

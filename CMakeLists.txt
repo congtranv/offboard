@@ -39,7 +39,7 @@ roslaunch_add_file_check(launch)
 add_executable(setpoint src/setpoint_node.cpp)
 add_executable(logs src/logs_node.cpp)
 # add_executable(hovering src/hovering_node.cpp)
-# add_executable(local src/loacl_node.cpp)
+add_executable(local src/local_node.cpp)
 # add_executable(gps src/gps_node.cpp)
 add_executable(setmode_offb src/setmode_offb.cpp)
 
@@ -52,9 +52,9 @@ target_link_libraries(logs
 # target_link_libraries(hovering
 #   ${catkin_LIBRARIES}
 # )
-# target_link_libraries(local
-#   ${catkin_LIBRARIES}
-# )
+target_link_libraries(local
+  ${catkin_LIBRARIES}
+)
 # target_link_libraries(gps
 #   ${catkin_LIBRARIES}
 # )

@@ -4,6 +4,10 @@
 #include <mavros_msgs/CommandBool.h>
 #include <mavros_msgs/SetMode.h>
 #include <sensor_msgs/BatteryState.h>
+#include <sensor_msgs/Imu.h>
+#include <sensor_msgs/MagneticField.h>
+#include <std_msgs/Float64.h>
+#include <sensor_msgs/FluidPressure.h>
 /******* local position *******/
 #include <geometry_msgs/PoseStamped.h>
 #include <geometry_msgs/Point.h>
@@ -18,11 +22,6 @@
 #include <tf/tf.h>
 #include <tf/transform_datatypes.h>
 /******* c++ *******/
-// #include <iostream>
-// #include <cmath>
-// #include <cstdio>
-// #include <fstream>
-// #include <iomanip>
 #include "offboard/logs.h"
 
 
@@ -145,6 +144,10 @@ geographic_msgs::GeoPoint ENUToWGS84(double, double, double, double, double, dou
 /****** DECLARE VARIANTS ******/
 mavros_msgs::State current_state;
 mavros_msgs::SetMode set_mode;
+std_msgs::Float64 rel_alt;
+sensor_msgs::Imu imu_data;
+sensor_msgs::MagneticField mag_data;
+sensor_msgs::FluidPressure static_press, diff_press;
 
 geometry_msgs::PoseStamped current_pose;
 geometry_msgs::PoseStamped target_pose;
@@ -183,6 +186,31 @@ geographic_msgs::GeoPoint refpoint; //Reference point to convert ECEF to ENU and
 void state_cb(const mavros_msgs::State::ConstPtr& msg)
 {
     current_state = *msg;
+}
+
+void relativeAlt_cb(const std_msgs::Float64::ConstPtr& msg)
+{
+    rel_alt = *msg;
+}
+
+void imuData_cb(const sensor_msgs::Imu::ConstPtr& msg)
+{
+	imu_data = *msg;
+}
+
+void magData_cb(const sensor_msgs::MagneticField::ConstPtr& msg)
+{
+	mag_data = *msg;
+}
+
+void staticPress_cb(const sensor_msgs::FluidPressure::ConstPtr& msg)
+{
+	static_press = *msg;
+}
+
+void diffPress_cb(const sensor_msgs::FluidPressure::ConstPtr& msg)
+{
+	diff_press = *msg;
 }
 
 // local pose callback

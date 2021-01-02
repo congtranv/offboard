@@ -82,13 +82,13 @@ int main(int argc, char **argv)
                      refpoint.latitude, 
                      refpoint.longitude, 
                      refpoint.altitude);
-    creates("reference", current_pose.pose.position.x,
-                        current_pose.pose.position.y,
-                        current_pose.pose.position.z,
-                        refpoint.latitude,
-                        refpoint.longitude,
-                        refpoint.altitude,
-                        gps_lat, gps_lon, gps_alt);
+    // creates("reference", current_pose.pose.position.x,
+    //                     current_pose.pose.position.y,
+    //                     current_pose.pose.position.z,
+    //                     refpoint.latitude,
+    //                     refpoint.longitude,
+    //                     refpoint.altitude,
+    //                     gps_lat, gps_lon, gps_alt);
     // ros::Duration(1).sleep();
 
     // set target pose
@@ -135,13 +135,13 @@ int main(int argc, char **argv)
     gps_lon = double(gps_position.lon)/10000000;
     gps_alt = double(gps_position.alt)/1000;
 
-    updates("pre-flight", current_pose.pose.position.x,
-                          current_pose.pose.position.y,
-                          current_pose.pose.position.z,
-                          global_position.latitude,
-                          global_position.longitude,
-                          global_position.altitude,
-                          gps_lat, gps_lon, gps_alt);
+    // updates("pre-flight", current_pose.pose.position.x,
+    //                       current_pose.pose.position.y,
+    //                       current_pose.pose.position.z,
+    //                       global_position.latitude,
+    //                       global_position.longitude,
+    //                       global_position.altitude,
+    //                       gps_lat, gps_lon, gps_alt);
 
     int i = 0;
     while (ros::ok() && (input_type ==true))
@@ -216,13 +216,13 @@ int main(int argc, char **argv)
             gps_lat = double(gps_position.lat)/10000000;
             gps_lon = double(gps_position.lon)/10000000;
             gps_alt = double(gps_position.alt)/1000;
-            updates_check(i+1, current_pose.pose.position.x,
-                               current_pose.pose.position.y,
-                               current_pose.pose.position.z,
-                               global_position.latitude,
-                               global_position.longitude,
-                               global_position.altitude,
-                               gps_lat, gps_lon, gps_alt);
+            // updates_check(i+1, current_pose.pose.position.x,
+            //                    current_pose.pose.position.y,
+            //                    current_pose.pose.position.z,
+            //                    global_position.latitude,
+            //                    global_position.longitude,
+            //                    global_position.altitude,
+            //                    gps_lat, gps_lon, gps_alt);
             ros::Duration(5).sleep();
 			i = i + 1;
 			ros::spinOnce();
@@ -245,13 +245,13 @@ int main(int argc, char **argv)
             gps_lat = double(gps_position.lat)/10000000;
             gps_lon = double(gps_position.lon)/10000000;
             gps_alt = double(gps_position.alt)/1000;
-            updates_check(i+1, current_pose.pose.position.x,
-                               current_pose.pose.position.y,
-                               current_pose.pose.position.z,
-                               global_position.latitude,
-                               global_position.longitude,
-                               global_position.altitude,
-                               gps_lat, gps_lon, gps_alt);
+            // updates_check(i+1, current_pose.pose.position.x,
+            //                    current_pose.pose.position.y,
+            //                    current_pose.pose.position.z,
+            //                    global_position.latitude,
+            //                    global_position.longitude,
+            //                    global_position.altitude,
+            //                    gps_lat, gps_lon, gps_alt);
             ros::Duration(5).sleep();
 
 			set_mode.request.custom_mode = "AUTO.LAND";
@@ -351,13 +351,13 @@ int main(int argc, char **argv)
             gps_lat = double(gps_position.lat)/10000000;
             gps_lon = double(gps_position.lon)/10000000;
             gps_alt = double(gps_position.alt)/1000;
-            updates_check(i+1, current_pose.pose.position.x,
-                               current_pose.pose.position.y,
-                               current_pose.pose.position.z,
-                               global_position.latitude,
-                               global_position.longitude,
-                               global_position.altitude,
-                               gps_lat, gps_lon, gps_alt);
+            // updates_check(i+1, current_pose.pose.position.x,
+            //                    current_pose.pose.position.y,
+            //                    current_pose.pose.position.z,
+            //                    global_position.latitude,
+            //                    global_position.longitude,
+            //                    global_position.altitude,
+            //                    gps_lat, gps_lon, gps_alt);
             ros::Duration(5).sleep();
 			i = i + 1;
 	    	ros::spinOnce();
@@ -373,13 +373,13 @@ int main(int argc, char **argv)
             gps_lat = double(gps_position.lat)/10000000;
             gps_lon = double(gps_position.lon)/10000000;
             gps_alt = double(gps_position.alt)/1000;
-            updates_check(i+1, current_pose.pose.position.x,
-                               current_pose.pose.position.y,
-                               current_pose.pose.position.z,
-                               global_position.latitude,
-                               global_position.longitude,
-                               global_position.altitude,
-                               gps_lat, gps_lon, gps_alt);
+            // updates_check(i+1, current_pose.pose.position.x,
+            //                    current_pose.pose.position.y,
+            //                    current_pose.pose.position.z,
+            //                    global_position.latitude,
+            //                    global_position.longitude,
+            //                    global_position.altitude,
+            //                    gps_lat, gps_lon, gps_alt);
             ros::Duration(5).sleep();
 
 			set_mode.request.custom_mode = "AUTO.LAND";

@@ -15,7 +15,17 @@ int main(int argc, char **argv)
             ("mavros/global_position/global", 10, globalPosition_cb);
     ros::Subscriber gps_pos_sub = nh.subscribe<mavros_msgs::GPSRAW> 
             ("mavros/gpsstatus/gps1/raw", 10, gpsPosition_cb);
-    
+    ros::Subscriber rel_alt_sub = nh.subscribe<std_msgs::Float64>
+            ("mavros/global_position/rel_alt", 10, relativeAlt_cb);
+    ros::Subscriber imu_data_sub = nh.subscribe<sensor_msgs::Imu>
+            ("mavros/imu/data_raw", 10, imuData_cb);
+    ros::Subscriber mag_data_sub = nh.subscribe<sensor_msgs::MagneticField>
+            ("mavros/imu/mag", 10, magData_cb);
+    ros::Subscriber static_press_sub = nh.subscribe<sensor_msgs::FluidPressure>
+            ("mavros/imu/static_pressure", 10, staticPress_cb);
+    ros::Subscriber diff_press_sub = nh.subscribe<sensor_msgs::FluidPressure>
+            ("mavros/imu/diff_pressure", 10, diffPress_cb);
+
     // the setpoint publishing rate MUST be faster than 2Hz
     ros::Rate rate(20.0);
 
@@ -40,7 +50,7 @@ int main(int argc, char **argv)
     ros::Duration(1).sleep();
 
 	// check current pose
-	for(int i = 100; ros::ok() && i > 0; --i)
+	for(int i = 10; ros::ok() && i > 0; --i)
 	{
         std::printf("\nCurrent local position: [%.3f, %.3f, %.3f]\n", 
                      current_pose.pose.position.x, 
@@ -53,7 +63,7 @@ int main(int argc, char **argv)
                      global_position.altitude);
 
         std::cout << "\n";
-		ros::spinOnce();
+	    ros::spinOnce();
         rate.sleep();
     }
     std::cout << "[ INFO] Check status done \n";
@@ -67,7 +77,20 @@ int main(int argc, char **argv)
                        global_position.latitude,
                        global_position.longitude,
                        global_position.altitude,
-                       gps_lat, gps_lon, gps_alt);
+                       gps_lat, gps_lon, gps_alt, rel_alt.data);
+    creates_sensor("initial", imu_data.angular_velocity.x, 
+                              imu_data.angular_velocity.y, 
+                              imu_data.angular_velocity.z,
+                              imu_data.linear_acceleration.x, 
+                              imu_data.linear_acceleration.y, 
+                              imu_data.linear_acceleration.z,
+                              mag_data.magnetic_field.x, 
+                              mag_data.magnetic_field.y, 
+                              mag_data.magnetic_field.z,
+                              static_press.fluid_pressure, 
+                              diff_press.fluid_pressure);
+    ros::Duration(1).sleep();
+
     while (ros::ok())
     {
         std::printf("\nCurrent local position: [%.3f, %.3f, %.3f]\n", 
@@ -90,7 +113,18 @@ int main(int argc, char **argv)
                           global_position.latitude,
                           global_position.longitude,
                           global_position.altitude,
-                          gps_lat, gps_lon, gps_alt);
+                          gps_lat, gps_lon, gps_alt, rel_alt.data);
+        updates_sensor("flight", imu_data.angular_velocity.x, 
+                                 imu_data.angular_velocity.y,
+                                 imu_data.angular_velocity.z,
+                                 imu_data.linear_acceleration.x, 
+                                 imu_data.linear_acceleration.y, 
+                                 imu_data.linear_acceleration.z,
+                                 mag_data.magnetic_field.x, 
+                                 mag_data.magnetic_field.y, 
+                                 mag_data.magnetic_field.z,
+                                 static_press.fluid_pressure, 
+                                 diff_press.fluid_pressure);
         ros::Duration(1).sleep();
         ros::spinOnce();
         rate.sleep();

@@ -223,7 +223,7 @@ int main(int argc, char **argv)
             //                    global_position.longitude,
             //                    global_position.altitude,
             //                    gps_lat, gps_lon, gps_alt);
-            ros::Duration(5).sleep();
+            // ros::Duration(5).sleep();
 			i = i + 1;
 			ros::spinOnce();
 		    rate.sleep();
@@ -252,7 +252,7 @@ int main(int argc, char **argv)
             //                    global_position.longitude,
             //                    global_position.altitude,
             //                    gps_lat, gps_lon, gps_alt);
-            ros::Duration(5).sleep();
+            // ros::Duration(5).sleep();
 
 			set_mode.request.custom_mode = "AUTO.LAND";
     	    if( set_mode_client.call(set_mode) && set_mode.response.mode_sent)
@@ -358,7 +358,7 @@ int main(int argc, char **argv)
             //                    global_position.longitude,
             //                    global_position.altitude,
             //                    gps_lat, gps_lon, gps_alt);
-            ros::Duration(5).sleep();
+            // ros::Duration(5).sleep();
 			i = i + 1;
 	    	ros::spinOnce();
     		rate.sleep();
@@ -380,7 +380,7 @@ int main(int argc, char **argv)
             //                    global_position.longitude,
             //                    global_position.altitude,
             //                    gps_lat, gps_lon, gps_alt);
-            ros::Duration(5).sleep();
+            // ros::Duration(5).sleep();
 
 			set_mode.request.custom_mode = "AUTO.LAND";
     	    if( set_mode_client.call(set_mode) && set_mode.response.mode_sent)

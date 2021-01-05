@@ -9,14 +9,25 @@ int main(int argc, char **argv)
     // subscriber
     ros::Subscriber state_sub = nh.subscribe<mavros_msgs::State>
             ("mavros/state", 10, state_cb);
+    ros::Subscriber batt_sub = nh.subscribe<sensor_msgs::BatteryState> 
+            ("mavros/battery", 10, battery_cb);
+
     ros::Subscriber local_pose_sub = nh.subscribe<geometry_msgs::PoseStamped>
             ("mavros/local_position/pose", 10, localPose_cb);
     ros::Subscriber global_pos_sub = nh.subscribe<sensor_msgs::NavSatFix> 
             ("mavros/global_position/global", 10, globalPosition_cb);
     ros::Subscriber gps_pos_sub = nh.subscribe<mavros_msgs::GPSRAW> 
             ("mavros/gpsstatus/gps1/raw", 10, gpsPosition_cb);
-    ros::Subscriber batt_sub = nh.subscribe<sensor_msgs::BatteryState> 
-            ("mavros/battery", 10, battery_cb);
+    ros::Subscriber rel_alt_sub = nh.subscribe<std_msgs::Float64>
+            ("mavros/global_position/rel_alt", 10, relativeAlt_cb);
+    ros::Subscriber imu_data_sub = nh.subscribe<sensor_msgs::Imu>
+            ("mavros/imu/data_raw", 10, imuData_cb);
+    ros::Subscriber mag_data_sub = nh.subscribe<sensor_msgs::MagneticField>
+            ("mavros/imu/mag", 10, magData_cb);
+    ros::Subscriber static_press_sub = nh.subscribe<sensor_msgs::FluidPressure>
+            ("mavros/imu/static_pressure", 10, staticPress_cb);
+    ros::Subscriber diff_press_sub = nh.subscribe<sensor_msgs::FluidPressure>
+            ("mavros/imu/diff_pressure", 10, diffPress_cb);
 
     // service
     ros::ServiceClient set_mode_client = nh.serviceClient<mavros_msgs::SetMode>
@@ -62,6 +73,8 @@ int main(int argc, char **argv)
                      global_position.longitude, 
                      global_position.altitude);
 
+        std::cout << "Current relative altitude: " << rel_alt.data << " m \n";
+
         batt_percent = current_batt.percentage * 100;
         std::printf("Current Battery capacity: %.1f \n", batt_percent);
         std::cout << "\n";
@@ -82,14 +95,25 @@ int main(int argc, char **argv)
                      refpoint.latitude, 
                      refpoint.longitude, 
                      refpoint.altitude);
-    // creates("reference", current_pose.pose.position.x,
-    //                     current_pose.pose.position.y,
-    //                     current_pose.pose.position.z,
-    //                     refpoint.latitude,
-    //                     refpoint.longitude,
-    //                     refpoint.altitude,
-    //                     gps_lat, gps_lon, gps_alt);
-    // ros::Duration(1).sleep();
+    creates("reference",  current_pose.pose.position.x,
+                        current_pose.pose.position.y,
+                        current_pose.pose.position.z,
+                        global_position.latitude,
+                        global_position.longitude,
+                        global_position.altitude,
+                        gps_lat, gps_lon, gps_alt, 
+                        rel_alt.data);
+    creates_sensor("reference", imu_data.angular_velocity.x, 
+                              imu_data.angular_velocity.y, 
+                              imu_data.angular_velocity.z,
+                              imu_data.linear_acceleration.x, 
+                              imu_data.linear_acceleration.y, 
+                              imu_data.linear_acceleration.z,
+                              mag_data.magnetic_field.x, 
+                              mag_data.magnetic_field.y, 
+                              mag_data.magnetic_field.z,
+                              static_press.fluid_pressure, 
+                              diff_press.fluid_pressure);
 
     // set target pose
     input_target();
@@ -130,18 +154,30 @@ int main(int argc, char **argv)
     }
     std::cout << "[ INFO] Set OFFBOARD stream done \n";
     std::cout << "[ INFO] Ready to switch ARM and OFFBOARD \n";
-    // ros::Duration(1).sleep();
+    ros::Duration(1).sleep();
     gps_lat = double(gps_position.lat)/10000000;
     gps_lon = double(gps_position.lon)/10000000;
     gps_alt = double(gps_position.alt)/1000;
 
-    // updates("pre-flight", current_pose.pose.position.x,
-    //                       current_pose.pose.position.y,
-    //                       current_pose.pose.position.z,
-    //                       global_position.latitude,
-    //                       global_position.longitude,
-    //                       global_position.altitude,
-    //                       gps_lat, gps_lon, gps_alt);
+    updates("pre-flight", current_pose.pose.position.x,
+                          current_pose.pose.position.y,
+                          current_pose.pose.position.z,
+                          global_position.latitude,
+                          global_position.longitude,
+                          global_position.altitude,
+                          gps_lat, gps_lon, gps_alt, 
+                          rel_alt.data);
+    updates_sensor("pre-flight", imu_data.angular_velocity.x, 
+                                 imu_data.angular_velocity.y,
+                                 imu_data.angular_velocity.z,
+                                 imu_data.linear_acceleration.x, 
+                                 imu_data.linear_acceleration.y, 
+                                 imu_data.linear_acceleration.z,
+                                 mag_data.magnetic_field.x, 
+                                 mag_data.magnetic_field.y, 
+                                 mag_data.magnetic_field.z,
+                                 static_press.fluid_pressure, 
+                                 diff_press.fluid_pressure);
 
     int i = 0;
     while (ros::ok() && (input_type ==true))
@@ -161,12 +197,7 @@ int main(int argc, char **argv)
             target_pose.pose.position.x = target_pos[i][0];
             target_pose.pose.position.y = target_pos[i][1];
             target_pose.pose.position.z = target_pos[i][2];
-            roll  = radian(target_pos[i][3]);
-            pitch = radian(target_pos[i][4]);
-            yaw   = radian(target_pos[i][5]);
-            q.setRPY(roll, pitch, yaw);
-	        tf::quaternionTFToMsg(q, target_pose.pose.orientation);
-
+            
             target_pose.header.stamp = ros::Time::now();
             local_pos_pub.publish(target_pose);
     		ros::spinOnce();
@@ -178,12 +209,7 @@ int main(int argc, char **argv)
             target_pose.pose.position.x = target_pos[target_num - 1][0];
             target_pose.pose.position.y = target_pos[target_num - 1][1];
             target_pose.pose.position.z = target_pos[target_num - 1][2];
-            roll  = radian(target_pos[target_num - 1][3]);
-            pitch = radian(target_pos[target_num - 1][4]);
-            yaw   = radian(target_pos[target_num - 1][5]);
-            q.setRPY(roll, pitch, yaw);
-	        tf::quaternionTFToMsg(q, target_pose.pose.orientation);
-
+            
             target_pose.header.stamp = ros::Time::now();
             local_pos_pub.publish(target_pose);
     		ros::spinOnce();
@@ -207,23 +233,29 @@ int main(int argc, char **argv)
                             target_pos[i+1][0], 
                             target_pos[i+1][1],
                             target_pos[i+1][2]);
-            wgs84_curr = ENUToWGS84(current_pose.pose.position.x, 
-                                    current_pose.pose.position.y,
-                                    current_pose.pose.position.z,
-                                    refpoint.latitude,
-                                    refpoint.longitude,
-                                    refpoint.altitude);
+           
             gps_lat = double(gps_position.lat)/10000000;
             gps_lon = double(gps_position.lon)/10000000;
             gps_alt = double(gps_position.alt)/1000;
-            // updates_check(i+1, current_pose.pose.position.x,
-            //                    current_pose.pose.position.y,
-            //                    current_pose.pose.position.z,
-            //                    global_position.latitude,
-            //                    global_position.longitude,
-            //                    global_position.altitude,
-            //                    gps_lat, gps_lon, gps_alt);
-            // ros::Duration(5).sleep();
+            updates_check(i+1, current_pose.pose.position.x,
+                               current_pose.pose.position.y,
+                               current_pose.pose.position.z,
+                               global_position.latitude,
+                               global_position.longitude,
+                               global_position.altitude,
+                               gps_lat, gps_lon, gps_alt, rel_alt.data);
+            updates_check_ss(i+1, imu_data.angular_velocity.x, 
+                                  imu_data.angular_velocity.y,
+                                  imu_data.angular_velocity.z,
+                                  imu_data.linear_acceleration.x, 
+                                  imu_data.linear_acceleration.y, 
+                                  imu_data.linear_acceleration.z,
+                                  mag_data.magnetic_field.x, 
+                                  mag_data.magnetic_field.y, 
+                                  mag_data.magnetic_field.z,
+                                  static_press.fluid_pressure, 
+                                  diff_press.fluid_pressure);
+            ros::Duration(5).sleep();
 			i = i + 1;
 			ros::spinOnce();
 		    rate.sleep();
@@ -236,23 +268,29 @@ int main(int argc, char **argv)
                             current_pose.pose.position.z);
     		        
             std::printf("[ INFO] Ready to LANDING \n");
-            wgs84_curr = ENUToWGS84(current_pose.pose.position.x, 
-                                    current_pose.pose.position.y,
-                                    current_pose.pose.position.z,
-                                    refpoint.latitude,
-                                    refpoint.longitude,
-                                    refpoint.altitude);
+            
             gps_lat = double(gps_position.lat)/10000000;
             gps_lon = double(gps_position.lon)/10000000;
             gps_alt = double(gps_position.alt)/1000;
-            // updates_check(i+1, current_pose.pose.position.x,
-            //                    current_pose.pose.position.y,
-            //                    current_pose.pose.position.z,
-            //                    global_position.latitude,
-            //                    global_position.longitude,
-            //                    global_position.altitude,
-            //                    gps_lat, gps_lon, gps_alt);
-            // ros::Duration(5).sleep();
+            updates_check(i+1, current_pose.pose.position.x,
+                               current_pose.pose.position.y,
+                               current_pose.pose.position.z,
+                               global_position.latitude,
+                               global_position.longitude,
+                               global_position.altitude,
+                               gps_lat, gps_lon, gps_alt, rel_alt.data);
+            updates_check_ss(i+1, imu_data.angular_velocity.x, 
+                                  imu_data.angular_velocity.y,
+                                  imu_data.angular_velocity.z,
+                                  imu_data.linear_acceleration.x, 
+                                  imu_data.linear_acceleration.y, 
+                                  imu_data.linear_acceleration.z,
+                                  mag_data.magnetic_field.x, 
+                                  mag_data.magnetic_field.y, 
+                                  mag_data.magnetic_field.z,
+                                  static_press.fluid_pressure, 
+                                  diff_press.fluid_pressure);
+            ros::Duration(5).sleep();
 
 			set_mode.request.custom_mode = "AUTO.LAND";
     	    if( set_mode_client.call(set_mode) && set_mode.response.mode_sent)
@@ -260,6 +298,9 @@ int main(int argc, char **argv)
     		    std::cout << "[ INFO] AUTO.LAND enabled \n";
                 break;
             }
+
+            ros::spinOnce();
+		    rate.sleep();
         }
 		else 
 		{
@@ -297,11 +338,7 @@ int main(int argc, char **argv)
             target_pose.pose.position.x = enu_goal.x;
             target_pose.pose.position.y = enu_goal.y;
             target_pose.pose.position.z = enu_goal.z;
-            roll  = radian(0);
-            pitch = radian(0);
-            yaw   = radian(0);
-            q.setRPY(roll, pitch, yaw);
-	        tf::quaternionTFToMsg(q, target_pose.pose.orientation);
+            
             target_pose.header.stamp = ros::Time::now();
             local_pos_pub.publish(target_pose);
 
@@ -318,11 +355,7 @@ int main(int argc, char **argv)
             target_pose.pose.position.x = enu_goal.x;
             target_pose.pose.position.y = enu_goal.y;
             target_pose.pose.position.z = enu_goal.z;
-            roll  = radian(0);
-            pitch = radian(0);
-            yaw   = radian(0);
-            q.setRPY(roll, pitch, yaw);
-	        tf::quaternionTFToMsg(q, target_pose.pose.orientation);
+            
             target_pose.header.stamp = ros::Time::now();
             local_pos_pub.publish(target_pose);
             
@@ -351,14 +384,25 @@ int main(int argc, char **argv)
             gps_lat = double(gps_position.lat)/10000000;
             gps_lon = double(gps_position.lon)/10000000;
             gps_alt = double(gps_position.alt)/1000;
-            // updates_check(i+1, current_pose.pose.position.x,
-            //                    current_pose.pose.position.y,
-            //                    current_pose.pose.position.z,
-            //                    global_position.latitude,
-            //                    global_position.longitude,
-            //                    global_position.altitude,
-            //                    gps_lat, gps_lon, gps_alt);
-            // ros::Duration(5).sleep();
+            updates_check(i+1, current_pose.pose.position.x,
+                               current_pose.pose.position.y,
+                               current_pose.pose.position.z,
+                               global_position.latitude,
+                               global_position.longitude,
+                               global_position.altitude,
+                               gps_lat, gps_lon, gps_alt, rel_alt.data);
+            updates_check_ss(i+1, imu_data.angular_velocity.x, 
+                                  imu_data.angular_velocity.y,
+                                  imu_data.angular_velocity.z,
+                                  imu_data.linear_acceleration.x, 
+                                  imu_data.linear_acceleration.y, 
+                                  imu_data.linear_acceleration.z,
+                                  mag_data.magnetic_field.x, 
+                                  mag_data.magnetic_field.y, 
+                                  mag_data.magnetic_field.z,
+                                  static_press.fluid_pressure, 
+                                  diff_press.fluid_pressure);
+            ros::Duration(5).sleep();
 			i = i + 1;
 	    	ros::spinOnce();
     		rate.sleep();
@@ -373,14 +417,25 @@ int main(int argc, char **argv)
             gps_lat = double(gps_position.lat)/10000000;
             gps_lon = double(gps_position.lon)/10000000;
             gps_alt = double(gps_position.alt)/1000;
-            // updates_check(i+1, current_pose.pose.position.x,
-            //                    current_pose.pose.position.y,
-            //                    current_pose.pose.position.z,
-            //                    global_position.latitude,
-            //                    global_position.longitude,
-            //                    global_position.altitude,
-            //                    gps_lat, gps_lon, gps_alt);
-            // ros::Duration(5).sleep();
+            updates_check(i+1, current_pose.pose.position.x,
+                               current_pose.pose.position.y,
+                               current_pose.pose.position.z,
+                               global_position.latitude,
+                               global_position.longitude,
+                               global_position.altitude,
+                               gps_lat, gps_lon, gps_alt, rel_alt.data);
+            updates_check_ss(i+1, imu_data.angular_velocity.x, 
+                                  imu_data.angular_velocity.y,
+                                  imu_data.angular_velocity.z,
+                                  imu_data.linear_acceleration.x, 
+                                  imu_data.linear_acceleration.y, 
+                                  imu_data.linear_acceleration.z,
+                                  mag_data.magnetic_field.x, 
+                                  mag_data.magnetic_field.y, 
+                                  mag_data.magnetic_field.z,
+                                  static_press.fluid_pressure, 
+                                  diff_press.fluid_pressure);
+            ros::Duration(5).sleep();
 
 			set_mode.request.custom_mode = "AUTO.LAND";
     	    if( set_mode_client.call(set_mode) && set_mode.response.mode_sent)
@@ -388,6 +443,9 @@ int main(int argc, char **argv)
     		    std::cout << "[ INFO] AUTO.LAND enabled \n";
                 break;
             }
+
+            ros::spinOnce();
+		    rate.sleep();
         }
         else 
 		{

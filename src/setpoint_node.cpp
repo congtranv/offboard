@@ -83,6 +83,9 @@ int main(int argc, char **argv)
     }
     std::cout << "[ INFO] Check status done \n";
     
+    creates();
+    creates_sensor();
+    
     gps_lat = double(gps_position.lat)/10000000;
     gps_lon = double(gps_position.lon)/10000000;
     gps_alt = double(gps_position.alt)/1000;
@@ -95,7 +98,7 @@ int main(int argc, char **argv)
                      refpoint.latitude, 
                      refpoint.longitude, 
                      refpoint.altitude);
-    creates("reference",  current_pose.pose.position.x,
+    updates("initial",  current_pose.pose.position.x,
                         current_pose.pose.position.y,
                         current_pose.pose.position.z,
                         global_position.latitude,
@@ -103,7 +106,15 @@ int main(int argc, char **argv)
                         global_position.altitude,
                         gps_lat, gps_lon, gps_alt, 
                         rel_alt.data);
-    creates_sensor("reference", imu_data.angular_velocity.x, 
+    updates("reference",  current_pose.pose.position.x,
+                        current_pose.pose.position.y,
+                        current_pose.pose.position.z,
+                        refpoint.latitude,
+                        refpoint.longitude,
+                        refpoint.altitude,
+                        gps_lat, gps_lon, gps_alt, 
+                        rel_alt.data);
+    updates_sensor("initial", imu_data.angular_velocity.x, 
                               imu_data.angular_velocity.y, 
                               imu_data.angular_velocity.z,
                               imu_data.linear_acceleration.x, 

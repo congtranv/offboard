@@ -4,9 +4,9 @@
 #include <fstream>
 #include <iomanip>
 
-void creates(std::string, double, double, double, 
+void creates(void);/*std::string, double, double, double, 
                     double, double, double,
-                    double, double, double, double);
+                    double, double, double, double);*/
 void updates(std::string, double, double, double, 
                    double, double, double,
                    double, double, double, double);
@@ -16,10 +16,10 @@ void updates_check(int, double, double, double,
 void updates_local(int, double, double, double); 
 void updates_global(int, double, double, double);
 
-void creates_sensor(std::string, double, double, double, 
+void creates_sensor(void);/*std::string, double, double, double, 
                                  double, double, double,
                                  double, double, double, 
-                                 double, double);
+                                 double, double);*/
 void updates_sensor(std::string, double, double, double, 
                                  double, double, double,
                                  double, double, double, 
@@ -29,27 +29,26 @@ void updates_check_ss(int, double, double, double,
                            double, double, double, 
                            double, double);                                 
 
-void creates(std::string name, double x_log, double y_log, double z_log, 
+void creates()/*std::string name, double x_log, double y_log, double z_log, 
                 double lat_log, double lon_log, double alt_log,
                 double lat_gps, double lon_gps, double alt_gps,
-                double rel_alt) 
+                double rel_alt)*/
 { 
 	std::fstream file; 
-
 	file.open("position.csv", std::ios::out | std::ios::app); 
-
+    
 	file << ", , , , , , , , , , \n";
     file << "Point, x (m), y (m), z (m), lat (degree), lon (degree), alt (m), gps_lat, gps_lon, gps_alt, rel alt (m) \n";
-    file << name << ", " << std::fixed << std::setprecision(6) << x_log << ", " 
-						 << std::fixed << std::setprecision(6) << y_log << ", " 
-						 << std::fixed << std::setprecision(6) << z_log << ", "
-						 << std::fixed << std::setprecision(6) << lat_log << ", " 
-						 << std::fixed << std::setprecision(6) << lon_log << ", " 
-						 << std::fixed << std::setprecision(3) << alt_log << ", "
-                         << std::fixed << std::setprecision(6) << lat_gps << ", "
-                         << std::fixed << std::setprecision(6) << lon_gps << ", "
-                         << std::fixed << std::setprecision(3) << alt_gps << ", "
-                         << std::fixed << std::setprecision(3) << rel_alt << "\n";
+    // file << name << ", " << std::fixed << std::setprecision(6) << x_log << ", " 
+	// 					 << std::fixed << std::setprecision(6) << y_log << ", " 
+	// 					 << std::fixed << std::setprecision(6) << z_log << ", "
+	// 					 << std::fixed << std::setprecision(6) << lat_log << ", " 
+	// 					 << std::fixed << std::setprecision(6) << lon_log << ", " 
+	// 					 << std::fixed << std::setprecision(3) << alt_log << ", "
+    //                      << std::fixed << std::setprecision(6) << lat_gps << ", "
+    //                      << std::fixed << std::setprecision(6) << lon_gps << ", "
+    //                      << std::fixed << std::setprecision(3) << alt_gps << ", "
+    //                      << std::fixed << std::setprecision(3) << rel_alt << "\n";
 	
     file.close(); 
 } 
@@ -125,10 +124,10 @@ void updates_global(int num, double lat, double lon, double alt)
 	file.close();
 }
 
-void creates_sensor(std::string name, double av_x, double av_y, double av_z, 
+void creates_sensor()/*std::string name, double av_x, double av_y, double av_z, 
                                       double la_x, double la_y, double la_z,
                                       double magx, double magy, double magz,
-                                      double static_press, double diff_press)
+                                      double static_press, double diff_press)*/
 {
 	std::fstream file; 
 
@@ -138,17 +137,17 @@ void creates_sensor(std::string name, double av_x, double av_y, double av_z,
     file << "Point, angular vel x (rad/s), angular vel y (rad/s), angular vel z (rad/s), " 
          << "linear acc x (m/s^2), linear acc y (m/s^2), linear acc z (m/s^2), "
          << "mag field x (T), mag field y (T), mag field z (T), static press (Pa), diff press (Pa) \n";
-    file << name << ", " << std::fixed << std::setprecision(8) << av_x << ", " 
-						 << std::fixed << std::setprecision(8) << av_y << ", " 
-						 << std::fixed << std::setprecision(8) << av_z << ", "
-						 << std::fixed << std::setprecision(8) << la_x << ", " 
-						 << std::fixed << std::setprecision(8) << la_y << ", " 
-						 << std::fixed << std::setprecision(8) << la_z << ", "
-                         << std::fixed << std::setprecision(8) << magx << ", "
-                         << std::fixed << std::setprecision(8) << magy << ", "
-                         << std::fixed << std::setprecision(8) << magz << ", "
-                         << std::fixed << std::setprecision(8) << static_press << ", "
-                         << std::fixed << std::setprecision(8) << diff_press << "\n";
+    // file << name << ", " << std::fixed << std::setprecision(8) << av_x << ", " 
+	// 					 << std::fixed << std::setprecision(8) << av_y << ", " 
+	// 					 << std::fixed << std::setprecision(8) << av_z << ", "
+	// 					 << std::fixed << std::setprecision(8) << la_x << ", " 
+	// 					 << std::fixed << std::setprecision(8) << la_y << ", " 
+	// 					 << std::fixed << std::setprecision(8) << la_z << ", "
+    //                      << std::fixed << std::setprecision(8) << magx << ", "
+    //                      << std::fixed << std::setprecision(8) << magy << ", "
+    //                      << std::fixed << std::setprecision(8) << magz << ", "
+    //                      << std::fixed << std::setprecision(8) << static_press << ", "
+    //                      << std::fixed << std::setprecision(8) << diff_press << "\n";
 	
     file.close(); 
 }

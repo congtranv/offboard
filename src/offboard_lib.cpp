@@ -145,7 +145,7 @@ void input_target()
 	}
 	else if (c == '2')
 	{
-		system("rosparam load $HOME/ros/catkin_ws/src/offboard_landing/config/waypoints.yaml");
+		system("rosparam load $HOME/ros/catkin_ws/src/offboard/config/waypoints.yaml");
     	std::cout << "[ INFO] Load parameters" << std::endl;
 		ros::param::get("num_of_target", in_num_of_target);
 		ros::param::get("x_pos", in_x_pos);

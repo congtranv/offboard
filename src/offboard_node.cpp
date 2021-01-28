@@ -52,7 +52,7 @@ int main(int argc, char **argv)
     std::cout << "[ INFO] GPS position received \n";
 
     // test ros::param::get()
-    // system("rosparam load $HOME/ros/catkin_ws/src/offboard_landing/config/waypoints.yaml");
+    // system("rosparam load $HOME/ros/catkin_ws/src/offboard/config/waypoints.yaml");
     // std::cout << "[ INFO] Load parameters" << std::endl;
 
     creates();

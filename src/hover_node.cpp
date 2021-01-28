@@ -21,7 +21,7 @@ int main(int argc, char **argv)
 
     ros::Rate rate(20.0);
 
-    while(ros::ok() && current_state.connected)
+    while(ros::ok() && !current_state.connected)
 	{
         std::cout << "[ INFO] Waiting for FCU connection...\n";
         ros::spinOnce();

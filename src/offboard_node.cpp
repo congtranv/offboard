@@ -51,35 +51,9 @@ int main(int argc, char **argv)
     }
     std::cout << "[ INFO] GPS position received \n";
 
-    // test ros::param::get()
-    // system("rosparam load $HOME/ros/catkin_ws/src/offboard/config/waypoints.yaml");
-    // std::cout << "[ INFO] Load parameters" << std::endl;
-
     creates();
     creates_sensor();
 
-    // refpoint.latitude = global_position.latitude;
-    // refpoint.longitude = global_position.longitude;
-    // refpoint.altitude = global_position.altitude;
-    // enu_curr = WGS84ToENU(global_position.latitude,
-    //                     global_position.longitude,
-    //                     global_position.altitude,
-    //                     refpoint.latitude, 
-    //                     refpoint.longitude, 
-    //                     refpoint.altitude);
-    // enu_ref = enu_curr;
-    // updates("reference", current_pose.pose.position.x,
-    //                      current_pose.pose.position.y,
-    //                      current_pose.pose.position.z,
-    //                      enu_ref.x,
-    //                      enu_ref.y,
-    //                      enu_ref.z,
-    //                      refpoint.latitude,
-    //                      refpoint.longitude,
-    //                      refpoint.altitude,
-    //                      gps_lat, gps_lon, gps_alt, 
-    //                      rel_alt.data);
-    
     std::cout << "[ INFO] Waiting for stable initial... \n";
     
     t_check = ros::Time::now();
@@ -128,12 +102,6 @@ int main(int argc, char **argv)
     refpoint.latitude = global_position.latitude;
     refpoint.longitude = global_position.longitude;
     refpoint.altitude = global_position.altitude;
-
-    // for(int i = 100; ros::ok() && i > 0; --i)
-    // {
-    //     ros::spinOnce();
-    //     rate.sleep();
-    // }
 
     std::printf("\nCurrent global position: [%f, %f, %.3f]\n", 
                 global_position.latitude, 
@@ -288,7 +256,7 @@ int main(int argc, char **argv)
                                  mag_data.magnetic_field.z,
                                  static_press.fluid_pressure, 
                                  diff_press.fluid_pressure);
-    ros::Duration(1).sleep();
+    // ros::Duration(1).sleep();
     
     std::cout << "[ INFO] Waiting arm and takeoff... \n";
     while (ros::ok() && !current_state.armed)

@@ -2,24 +2,26 @@
 #include <offboard/logging.h>
 
 /****** FUNCTIONS ******/
-bool check_position(float error, double target_x, double target_y, double target_z,
-					double currentx, double currenty, double currentz)
+// bool check_position(float error, double target_x, double target_y, double target_z,
+// 					double currentx, double currenty, double currentz)
+bool check_position(float error, geometry_msgs::PoseStamped current,
+					geometry_msgs::PoseStamped target)
 {
-	bool reached;
-	if(((target_x - error) < currentx)
-	&& (currentx < (target_x + error)) 
-	&& ((target_y - error) < currenty)
-	&& (currenty < (target_y + error))
-	&& ((target_z - error) < currentz)
-	&& (currentz < (target_z + error)))
+	// bool reached;
+	if(((target.pose.position.x - error) < current.pose.position.x)
+	&& (current.pose.position.x < (target.pose.position.x + error)) 
+	&& ((target.pose.position.y - error) < current.pose.position.y)
+	&& (current.pose.position.y < (target.pose.position.y + error))
+	&& ((target.pose.position.z - error) < current.pose.position.z)
+	&& (current.pose.position.z < (target.pose.position.z + error)))
 	{
-		reached = 1;
+		return 1;
 	}
 	else
 	{
-		reached = 0;
+		return 0;
 	}
-	return reached;
+	// return reached;
 }
 
 bool check_orientation(double target_x, double target_y, double target_z, double target_w,
@@ -82,18 +84,19 @@ void input_local_target()
 {
 	std::cout << "Input Local position(s)" << std::endl;
 	std::cout << "Number of target(s): "; std::cin >> target_num;
+	if(!in_x_pos.empty() || !in_y_pos.empty() || !in_z_pos.empty())
+    {
+        in_x_pos.clear();
+		in_y_pos.clear();
+		in_z_pos.clear();
+    }
 	for (int i = 0; i < target_num; i++)
 	{
 		std::cout << "Target (" << i+1 << ") position (in meter):" <<std::endl; 
-		std::cout << "pos_x_" << i+1 << ": "; std::cin >> target_pos[i][0];
-		std::cout << "pos_y_" << i+1 << ": "; std::cin >> target_pos[i][1];
-		std::cout << "pos_z_" << i+1 << ": "; std::cin >> target_pos[i][2];
-		updates_local(i, target_pos[i][0], target_pos[i][1], target_pos[i][2]);
-		// std::cout << "Target (" << i+1 << ") orientation (in degree):" <<std::endl; 
-		target_pos[i][3] = 0;
-		target_pos[i][4] = 0;
-		target_pos[i][5] = 0;
-		// std::cout << "yaw_" << i+1 << ":"; std::cin >> target_pos[i][5];
+		std::cout << "pos_x_" << i+1 << ": "; std::cin >> in_x_pos[i];
+		std::cout << "pos_y_" << i+1 << ": "; std::cin >> in_y_pos[i];
+		std::cout << "pos_z_" << i+1 << ": "; std::cin >> in_z_pos[i];
+		updates_local(i, in_x_pos[i], in_y_pos[i], in_z_pos[i]);
 	}
 	std::cout << "Check error value (0 < and < 1m): "; std::cin >> check_error;
 	if (check_error < 0 || check_error > 1) 
@@ -107,19 +110,25 @@ void input_global_target()
 {
 	std::cout << "Input GPS position(s)" << std::endl;
 	std::cout << "Number of goal(s): "; std::cin >> goal_num;
+	if(!in_latitude.empty() || !in_longitude.empty() || !in_altitude.empty())
+    {
+        in_latitude.clear();
+		in_longitude.clear();
+		in_altitude.clear();
+    }
 	for (int i = 0; i < goal_num; i++)
 	{
 		std::cout << "Goal ("<< i+1 <<") position:" << std::endl;
-		std::cout << "Latitude  " << i+1 << " (in degree): "; std::cin >> goal_pos[i][0];
-		std::cout << "Longitude " << i+1 << " (in degree): "; std::cin >> goal_pos[i][1];
-		std::cout << "Altitude  " << i+1 << "  (in meter): "; std::cin >> goal_pos[i][2];
-		updates_global(i, goal_pos[i][0], goal_pos[i][1], goal_pos[i][2]);
+		std::cout << "Latitude  " << i+1 << " (in degree): "; std::cin >> in_latitude[i];
+		std::cout << "Longitude " << i+1 << " (in degree): "; std::cin >> in_longitude[i];
+		std::cout << "Altitude  " << i+1 << "  (in meter): "; std::cin >> in_altitude[i];
+		updates_global(i, in_latitude[i], in_longitude[i], in_altitude[i]);
 	}
 	std::cout << "Check error value (0 < and < 1m): "; std::cin >> check_error;
 	if (check_error < 0 || check_error > 1) 
 	{
 		std::cout << "That error is out of range, set to default (0.1 m)" << std::endl;
-		check_error = 0.1;
+		check_error = 0.3;
 	}
 }
 
@@ -145,14 +154,26 @@ void input_target()
 	}
 	else if (c == '2')
 	{
+		if(!in_x_pos.empty() || !in_y_pos.empty() || !in_z_pos.empty())
+		{
+			in_x_pos.clear();
+			in_y_pos.clear();
+			in_z_pos.clear();
+		}
+		if(!in_latitude.empty() || !in_longitude.empty() || !in_altitude.empty())
+		{
+			in_latitude.clear();
+			in_longitude.clear();
+			in_altitude.clear();
+		}
 		system("rosparam load $HOME/ros/catkin_ws/src/offboard/config/waypoints.yaml");
     	std::cout << "[ INFO] Load parameters" << std::endl;
-		ros::param::get("num_of_target", in_num_of_target);
+		ros::param::get("num_of_target", target_num);
 		ros::param::get("x_pos", in_x_pos);
 		ros::param::get("y_pos", in_y_pos);
 		ros::param::get("z_pos", in_z_pos);
 		ros::param::get("target_error", local_error);
-		ros::param::get("num_of_goal", in_num_of_goal);
+		ros::param::get("num_of_goal", goal_num);
 		ros::param::get("latitude", in_latitude);
 		ros::param::get("longitude", in_longitude);
 		ros::param::get("altitude", in_altitude);
@@ -163,35 +184,29 @@ void input_target()
 		{
 			input_type = true;
 			check_error = local_error;
-			target_num = in_num_of_target;
+			target_num = target_num;
 			for (int i = 0; i < target_num; i++)
 			{
-				target_pos[i][0] = in_x_pos[i];
-				target_pos[i][1] = in_y_pos[i];
-				target_pos[i][2] = in_z_pos[i];
-				std::cout << "Target (" << i+1 << "): [" << target_pos[i][0] << ", "
-														 << target_pos[i][1] << ", "
-														 << target_pos[i][2] << "]" << std::endl;
-				updates_local(i+1, target_pos[i][0], target_pos[i][1], target_pos[i][2]);
+				std::cout << "Target (" << i+1 << "): [" << in_x_pos[i] << ", "
+														 << in_y_pos[i] << ", "
+														 << in_z_pos[i] << "]\n";
+				updates_local(i+1, in_x_pos[i], in_y_pos[i], in_z_pos[i]);
 			}
-			std::cout << "Check error value: " << check_error << std::endl;
+			std::cout << "Check error value: " << check_error << " (m)\n";
 		}
 		else if (c == '4')
 		{
 			input_type = false;
 			check_error = global_error;
-			goal_num = in_num_of_goal;
+			goal_num = goal_num;
 			for (int i = 0; i < goal_num; i++)
 			{
-				goal_pos[i][0] = in_latitude[i];
-				goal_pos[i][1] = in_longitude[i];
-				goal_pos[i][2] = in_altitude[i];
-				updates_global(i+1, goal_pos[i][0], goal_pos[i][1], goal_pos[i][2]);
-				std::cout << "Goal (" << i+1 << "): [" << goal_pos[i][0] << ", "
-													   << goal_pos[i][1] << ", "
-													   << goal_pos[i][2] << "]" << std::endl;
+				updates_global(i+1, in_latitude[i], in_longitude[i], in_altitude[i]);
+				std::cout << "Goal (" << i+1 << "): [" << in_latitude[i] << ", "
+													   << in_longitude[i] << ", "
+													   << in_altitude[i] << "]" << std::endl;
 			}
-			std::cout << "Check error value: " << check_error << std::endl;
+			std::cout << "Check error value: " << check_error << " (m)\n";
 		}
 		else input_target();
 	}
@@ -250,6 +265,23 @@ double distanceLocal(double x1, double y1, double z1, double x2, double y2, doub
 {
 	return sqrt((x1-x2)*(x1-x2) + (y1-y2)*(y1-y2) + (z1-z2)*(z1-z2));
 }
+
+void waypointGenerate(geometry_msgs::PoseStamped current, 
+					  geometry_msgs::PoseStamped target, 
+					  double* vx, double* vy, double* vz)
+{
+	double dx = target.pose.position.x - current.pose.position.x; 
+	double dy = target.pose.position.y - current.pose.position.y; 
+	double dz = target.pose.position.z - current.pose.position.z; 
+	double d = sqrt(dx*dx + dy*dx + dz*dz);
+	double v;
+	system("rosparam load $HOME/ros/catkin_ws/src/offboard/config/waypoints.yaml");
+	ros::param::get("v_desired", v);
+	*vx = (dx/d) * v;
+	*vy = (dy/d) * v;
+	*vz = (dz/d) * v;
+}
+
 
 geometry_msgs::Point WGS84ToECEF(double lat, double lon, double alt)
 {

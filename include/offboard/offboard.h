@@ -36,10 +36,6 @@ const double b = 6356752.314245;     // Derived Earth semiminor axis (m)
 const double f = (a - b) / a;           // Ellipsoid Flatness
 const double f_inv = 1.0 / f;       // Inverse flattening
 
-//const double f_inv = 298.257223563; // WGS-84 Flattening Factor of the Earth 
-//const double b = a - a / f_inv;
-//const double f = 1.0 / f_inv;
-
 const double a_sq = a * a;
 const double b_sq = b * b;
 const double e_sq = f * (2 - f);    // Square of Eccentricity
@@ -54,6 +50,8 @@ sensor_msgs::FluidPressure static_press, diff_press;
 
 geometry_msgs::PoseStamped current_pose;
 geometry_msgs::PoseStamped target_pose;
+geometry_msgs::PoseStamped takeoff_pose;
+geometry_msgs::PoseStamped traj_pose;
 
 bool global_position_received = false;
 sensor_msgs::NavSatFix global_position;
@@ -67,31 +65,27 @@ sensor_msgs::BatteryState current_batt;
 
 tf::Quaternion q; // quaternion to transform to RPY
 
-int target_num; // number of local setpoints
-double target_pos[10][7]; // local setpoints list
-double roll, pitch, yaw; // roll, pitch, yaw angle
-double r, p, y; // roll, pitch, yaw use in transform
-
-int goal_num; // number of global setpoints
-double goal_pos[10][3]; // global setpoints list
-double distance;
-
-int in_num_of_target;
+int target_num;
 std::vector<double> in_x_pos;
 std::vector<double> in_y_pos;
 std::vector<double> in_z_pos;
-int in_num_of_goal;
+int goal_num;
 std::vector<double> in_latitude;
 std::vector<double> in_longitude;
 std::vector<double> in_altitude;
 float local_error, global_error;
 
+double distance;
+std::vector<geometry_msgs::PoseStamped> traj;
+
 bool input_type = true; // true == input local || false == input global setpoints
 bool final_check = false; // true == reached final point || false == NOT final point
 float batt_percent; // baterry capacity
 
-float check_error = 0.1; // default = 0.1 m
+float check_error; // default = 0.1 m
 ros::Time t_check;
+float t_hover;
+double vx, vy, vz;
 
 geometry_msgs::Point enu_goal, enu_curr, enu_ref; //Local ENU points: converted from GPS goal and current
 geographic_msgs::GeoPoint wgs84_target, wgs84_curr; //Global WGS84 point: convert from ENU target and current
@@ -100,13 +94,12 @@ geographic_msgs::GeoPoint refpoint; //Reference point to convert ECEF to ENU and
 double x_offset, y_offset, z_offset;
 double x_off[100], y_off[100], z_off[100];
 /****** DEFINE FUNCTIONS ******/
-/********************************************************************************/
-/***** check_position: check when drone reached the target positions       ******/
-/***** input: x_target, y_target, ztarget, x_current, y_current, z_current ******/
-/***** return: true or false                                               ******/          
-/********************************************************************************/
-bool check_position(float, double, double, double,
-				    double, double, double);
+/****************************************************************************/
+/***** check_position: check when drone reached the target positions   ******/
+/***** input: error, current_pose, target_pose - return: true or false ******/        
+/****************************************************************************/
+bool check_position(float, geometry_msgs::PoseStamped,
+				    geometry_msgs::PoseStamped);
 
 /*******************************************************************************************/
 /***** check_orientation: check when drone reached the target orientations            ******/
@@ -161,6 +154,9 @@ double radian(double);
 /*********************************************************************************************/
 double measureGPS(double, double, double, double, double, double);
 double distanceLocal(double, double, double, double, double, double);
+
+void waypointGenerate(geometry_msgs::PoseStamped, geometry_msgs::PoseStamped, 
+					  double*, double*, double*);
 
 /* WGS84ToECEF: Converts the WGS-84 Geodetic point (latitude, longitude, altitude) **
 ** to Earth-Centered Earth-Fixed (ECEF) coordinates (x, y, z)                      **/

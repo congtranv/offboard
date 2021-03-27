@@ -1,13 +1,13 @@
 xt: 0
 yt: 0
-xt: 3
+zt: 3
 
 hover_time: 10
 
 num_of_target: 4
-x_pos: [0, 6, 6, 0]
-y_pos: [0, 0, 6, 6]
-z_pos: [5, 5, 5, 5]
+x_pos: [0, 0, 0, 0]
+y_pos: [0, 0, 0, 0]
+z_pos: [8, 5, 7, 3]
 target_error: 0.1
 
 num_of_goal: 3
@@ -16,4 +16,4 @@ longitude: [105.842895, 105.842945, 105.842985]
 altitude: [-20, -20, -20]
 goal_error: 0.3
 
-v_desired: 3 # m/s
+v_desired: 1 # m/s

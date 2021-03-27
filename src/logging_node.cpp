@@ -54,60 +54,11 @@ int main(int argc, char **argv)
         rate.sleep();
     }
 
-//     refpoint.latitude = global_position.latitude;
-//     refpoint.longitude = global_position.longitude;
-//     refpoint.altitude = global_position.altitude;
-//     std::printf("Reference position: [%f, %f, %.3f]\n", 
-//                      refpoint.latitude, 
-//                      refpoint.longitude, 
-//                      refpoint.altitude);
-    
     std::cout << "[ INFO] Logging... \n";
     while (ros::ok())
     {
-        // std::printf("Current local position: [%.3f, %.3f, %.3f]\n", 
-        //             current_pose.pose.position.x, 
-        //             current_pose.pose.position.y, 
-        //             current_pose.pose.position.z);
-            
-        // std::printf("Current global position: [%f, %f, %.3f]\n", 
-        //             global_position.latitude, 
-        //             global_position.longitude, 
-        //             global_position.altitude);
-
-        gps_lat = double(gps_position.lat)/10000000;
-        gps_lon = double(gps_position.lon)/10000000;
-        gps_alt = double(gps_position.alt)/1000;
-
-        // enu_curr = WGS84ToENU(global_position.latitude,
-        //                       global_position.longitude,
-        //                       global_position.altitude,
-        //                       refpoint.latitude, 
-        //                       refpoint.longitude, 
-        //                       refpoint.altitude);
-
-        updates("flight", current_pose.pose.position.x,
-                          current_pose.pose.position.y,
-                          current_pose.pose.position.z,
-                          enu_curr.x,
-                          enu_curr.y,
-                          enu_curr.z,
-                          global_position.latitude,
-                          global_position.longitude,
-                          global_position.altitude,
-                          gps_lat, gps_lon, gps_alt, 
-                          rel_alt.data);
-        updates_sensor("flight", imu_data.angular_velocity.x, 
-                                 imu_data.angular_velocity.y,
-                                 imu_data.angular_velocity.z,
-                                 imu_data.linear_acceleration.x, 
-                                 imu_data.linear_acceleration.y, 
-                                 imu_data.linear_acceleration.z,
-                                 mag_data.magnetic_field.x, 
-                                 mag_data.magnetic_field.y, 
-                                 mag_data.magnetic_field.z,
-                                 static_press.fluid_pressure, 
-                                 diff_press.fluid_pressure);
+        updates("flight", current_pose, enu_curr, global_position, gps_position, rel_alt.data);
+        updates_sensor("flight", imu_data, mag_data, static_press, diff_press);
         ros::Duration(0.1).sleep();
         if (!current_state.armed)
         {

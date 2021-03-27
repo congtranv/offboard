@@ -2,18 +2,20 @@
 #include <offboard/logging.h>
 
 /****** FUNCTIONS ******/
-// bool check_position(float error, double target_x, double target_y, double target_z,
-// 					double currentx, double currenty, double currentz)
+
 bool check_position(float error, geometry_msgs::PoseStamped current,
 					geometry_msgs::PoseStamped target)
 {
-	// bool reached;
-	if(((target.pose.position.x - error) < current.pose.position.x)
-	&& (current.pose.position.x < (target.pose.position.x + error)) 
-	&& ((target.pose.position.y - error) < current.pose.position.y)
-	&& (current.pose.position.y < (target.pose.position.y + error))
-	&& ((target.pose.position.z - error) < current.pose.position.z)
-	&& (current.pose.position.z < (target.pose.position.z + error)))
+	double xt = target.pose.position.x;
+	double yt = target.pose.position.y;
+	double zt = target.pose.position.z;
+	double xc = current.pose.position.x;
+	double yc = current.pose.position.y;
+	double zc = current.pose.position.z;
+
+	if(((xt - error) < xc) && (xc < (xt + error)) 
+	&& ((yt - error) < yc) && (yc < (yt + error))
+	&& ((zt - error) < zc) && (zc < (zt + error)))
 	{
 		return 1;
 	}
@@ -21,68 +23,63 @@ bool check_position(float error, geometry_msgs::PoseStamped current,
 	{
 		return 0;
 	}
-	// return reached;
 }
 
-bool check_orientation(double target_x, double target_y, double target_z, double target_w,
-					   double currentx, double currenty, double currentz, double currentw)
+bool check_orientation(float error, geometry_msgs::PoseStamped current,
+					geometry_msgs::PoseStamped target)
 {
-	bool reached;
+	double currentx = current.pose.orientation.x;
+	double currenty = current.pose.orientation.y;
+	double currentz = current.pose.orientation.z;
+	double currentw = current.pose.orientation.w;
+	double target_x = target.pose.orientation.x;
+	double target_y = target.pose.orientation.y;
+	double target_z = target.pose.orientation.z;
+	double target_w = target.pose.orientation.w;
+
 	// tf Quaternion to RPY
-	tf::Quaternion qc(currentx,
-					  currenty,
-					  currentz,
-					  currentw);
+	tf::Quaternion qc(currentx, currenty, currentz, currentw);
 	tf::Matrix3x3 mc(qc);
 	double rc, pc, yc;
 	mc.getRPY(rc, pc, yc);
 
-	tf::Quaternion qt(target_x,
-					  target_y,
-					  target_z,
-					  target_w);
+	tf::Quaternion qt(target_x, target_y, target_z, target_w);
 	tf::Matrix3x3 mt(qt);
 	double rt, pt, yt;
 	mt.getRPY(rt, pt, yt);
+
 	// check
 	if((((degree(rt)-1)<(degree(rc)))&&(degree(rc)<(degree(rt)+1)))
 	 &&(((degree(pt)-1)<(degree(pc)))&&(degree(pc)<(degree(pt)+1)))
 	 &&(((degree(yt)-1)<(degree(yc)))&&(degree(yc)<(degree(yt)+1)))) 
 	{
-		reached = 1;
+		return 1;
 	}
 	else
 	{
-		reached = 0;
+		return 0;
 	}
-	return reached;
 }
 
 bool check_global(double lat, double lon, double alt,
 				double lat0, double lon0, double alt0)
 {
-	bool reached;
-	if(
-		((lat - 0.000001) < lat0)
-	 && (lat0 < (lat + 0.000001)) 
-	 && ((lon - 0.000001) < lon0)
-	 && (lon0 < (lon + 0.000001))
-	 && ((alt - 0.1) < alt0)
-	 && (alt0 < (alt + 0.1))
+	if(((lat - 0.000001) < lat0) && (lat0 < (lat + 0.000001)) 
+	 && ((lon - 0.000001) < lon0) && (lon0 < (lon + 0.000001))
+	 && ((alt - 0.1) < alt0) && (alt0 < (alt + 0.1))
 	)
 	{
-		reached = 1;
+		return 1;
 	}
 	else
 	{
-		reached = 0;
+		return 0;
 	}
-	return reached;
 }
 
 void input_local_target()
 {
-	std::cout << "Input Local position(s)" << std::endl;
+	std::cout << "[ INFO] Input Local position(s)" << std::endl;
 	std::cout << "Number of target(s): "; std::cin >> target_num;
 	if(!in_x_pos.empty() || !in_y_pos.empty() || !in_z_pos.empty())
     {
@@ -93,17 +90,26 @@ void input_local_target()
 	for (int i = 0; i < target_num; i++)
 	{
 		std::cout << "Target (" << i+1 << ") position (in meter):" <<std::endl; 
-		std::cout << "pos_x_" << i+1 << ": "; std::cin >> in_x_pos[i];
-		std::cout << "pos_y_" << i+1 << ": "; std::cin >> in_y_pos[i];
-		std::cout << "pos_z_" << i+1 << ": "; std::cin >> in_z_pos[i];
+		std::cout << "x (" << i+1 << "): "; std::cin >> in_x_pos[i];
+		std::cout << "y (" << i+1 << "): "; std::cin >> in_y_pos[i];
+		std::cout << "z (" << i+1 << "): "; std::cin >> in_z_pos[i];
 		updates_local(i, in_x_pos[i], in_y_pos[i], in_z_pos[i]);
 	}
-	std::cout << "Check error value (0 < and < 1m): "; std::cin >> check_error;
-	if (check_error < 0 || check_error > 1) 
+	int count = 0;
+	while (check_error < 0 || check_error > 1) 
 	{
-		std::cout << "That error is out of range, set to default (0.1 m)" << std::endl;
-		check_error = 0.1;
+		std::cout << "Check offset value (0 < and < 1m): "; std::cin >> check_error;
+		if (check_error < 0 || check_error > 1) 
+		{
+			count ++;
+		}
+		if (count = 3)
+		{
+			break;
+		}
 	}
+	std::cout << "That error is out of range, set to default (0.1 m)" << std::endl;
+	check_error = 0.1;
 }
 
 void input_global_target()
@@ -119,35 +125,44 @@ void input_global_target()
 	for (int i = 0; i < goal_num; i++)
 	{
 		std::cout << "Goal ("<< i+1 <<") position:" << std::endl;
-		std::cout << "Latitude  " << i+1 << " (in degree): "; std::cin >> in_latitude[i];
+		std::cout << "Latitude " << i+1 << " (in degree): "; std::cin >> in_latitude[i];
 		std::cout << "Longitude " << i+1 << " (in degree): "; std::cin >> in_longitude[i];
-		std::cout << "Altitude  " << i+1 << "  (in meter): "; std::cin >> in_altitude[i];
+		std::cout << "Altitude " << i+1 << "  (in meter): "; std::cin >> in_altitude[i];
 		updates_global(i, in_latitude[i], in_longitude[i], in_altitude[i]);
 	}
-	std::cout << "Check error value (0 < and < 1m): "; std::cin >> check_error;
-	if (check_error < 0 || check_error > 1) 
+	int count = 0;
+	while (check_error < 0 || check_error > 1) 
 	{
-		std::cout << "That error is out of range, set to default (0.1 m)" << std::endl;
-		check_error = 0.3;
+		std::cout << "Check offset value (0 < and < 1m): "; std::cin >> check_error;
+		if (check_error < 0 || check_error > 1) 
+		{
+			count ++;
+		}
+		if (count = 3)
+		{
+			break;
+		}
 	}
+	std::cout << "That error is out of range, set to default (0.3 m)" << std::endl;
+	check_error = 0.3;
 }
 
 void input_target()
 {
 	char c;
-	std::cout << "Manual Input (1) || Load Parameter (2) ? (1/2)\n"; std::cin >> c;
+	std::cout << "(1) Manual Input || Load Parameter (2) ? (1/2)\n"; std::cin >> c;
 	if (c == '1')
 	{
-		std::cout << "Waypoint type: (3) Local || (4) Global ? (3/4) \n"; std::cin >> c;
+		std::cout << "Waypoint type: (3) Local || Global (4) ? (3/4)\n"; std::cin >> c;
 		if (c == '3')
 		{
 			input_local_target();
-			input_type = true;
+			local_input = true;
 		}
 		else if (c == '4')
 		{
 			input_global_target();
-			input_type = false;
+			local_input = false;
 		}
 		else input_target();
 
@@ -182,7 +197,7 @@ void input_target()
 		std::cout << "Waypoint type: (3) Local || (4) Global ? (3/4) \n"; std::cin >> c;
 		if (c == '3')
 		{
-			input_type = true;
+			local_input = true;
 			check_error = local_error;
 			target_num = target_num;
 			for (int i = 0; i < target_num; i++)
@@ -192,11 +207,11 @@ void input_target()
 														 << in_z_pos[i] << "]\n";
 				updates_local(i+1, in_x_pos[i], in_y_pos[i], in_z_pos[i]);
 			}
-			std::cout << "Check error value: " << check_error << " (m)\n";
+			std::cout << "Check offset value: " << check_error << " (m)\n";
 		}
 		else if (c == '4')
 		{
-			input_type = false;
+			local_input = false;
 			check_error = global_error;
 			goal_num = goal_num;
 			for (int i = 0; i < goal_num; i++)
@@ -206,7 +221,7 @@ void input_target()
 													   << in_longitude[i] << ", "
 													   << in_altitude[i] << "]" << std::endl;
 			}
-			std::cout << "Check error value: " << check_error << " (m)\n";
+			std::cout << "Check offset value: " << check_error << " (m)\n";
 		}
 		else input_target();
 	}
@@ -219,14 +234,12 @@ void input_target()
 
 double degree(double rad)
 {
-	double radian_to_degree = (rad*180)/PI;
-	return radian_to_degree;
+	return (rad*180)/PI;
 }
 
 double radian(double deg)
 {
-	double degree_to_radian = (deg*PI)/180;
-	return degree_to_radian;
+	return (deg*PI)/180;
 }
 
 double measureGPS(double lat1, double lon1, double alt1, 
@@ -261,18 +274,34 @@ double measureGPS(double lat1, double lon1, double alt1,
 	return Distance;
 }
 
-double distanceLocal(double x1, double y1, double z1, double x2, double y2, double z2)
+double distanceLocal(geometry_msgs::PoseStamped current, geometry_msgs::PoseStamped target)
 {
-	return sqrt((x1-x2)*(x1-x2) + (y1-y2)*(y1-y2) + (z1-z2)*(z1-z2));
+	double xc = current.pose.position.x;
+	double yc = current.pose.position.y;
+	double zc = current.pose.position.z;
+	double xt = target.pose.position.x;
+	double yt = target.pose.position.y;
+	double zt = target.pose.position.z;
+
+	return sqrt((xt-xc)*(xt-xc) + (yt-yc)*(yt-yc) + (zt-zc)*(zt-zc));
 }
 
-void waypointGenerate(geometry_msgs::PoseStamped current, 
-					  geometry_msgs::PoseStamped target, 
-					  double* vx, double* vy, double* vz)
+void velociyGenerate(geometry_msgs::PoseStamped current, 
+					 geometry_msgs::PoseStamped target, 
+					 double* vx, double* vy, double* vz)
 {
-	double dx = target.pose.position.x - current.pose.position.x; 
-	double dy = target.pose.position.y - current.pose.position.y; 
-	double dz = target.pose.position.z - current.pose.position.z; 
+	double xt = target.pose.position.x;	
+	double yt = target.pose.position.y;
+	double zt = target.pose.position.z;
+
+	double xc = current.pose.position.x;	
+	double yc = current.pose.position.y;
+	double zc = current.pose.position.z;
+	
+	double dx = xt - xc; 
+	double dy = yt - yc; 
+	double dz = zt - zc; 
+
 	double d = sqrt(dx*dx + dy*dx + dz*dz);
 	double v;
 	system("rosparam load $HOME/ros/catkin_ws/src/offboard/config/waypoints.yaml");
@@ -282,6 +311,12 @@ void waypointGenerate(geometry_msgs::PoseStamped current,
 	*vz = (dz/d) * v;
 }
 
+// void get_GPS(int gps_lat, int gps_lon, int gps_alt, double* lat, double* lon, double* alt)
+// {
+// 	*lat = double(gps_lat)/10000000;
+//     *lon = double(gps_lon)/10000000;
+//     *alt = double(gps_alt)/1000;
+// }
 
 geometry_msgs::Point WGS84ToECEF(double lat, double lon, double alt)
 {

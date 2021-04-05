@@ -1,5 +1,13 @@
-#include "offboard/offboard.h"
-#include "offboard/logging.h"
+#include <iostream>
+#include <ros/ros.h>
+#include <mavros_msgs/State.h>
+#include <geometry_msgs/PoseStamped.h>
+
+mavros_msgs::State current_state;
+geometry_msgs::PoseStamped current_pose, target_pose;
+
+void state_cb_(const mavros_msgs::State::ConstPtr& msg);
+void localPose_cb_(const geometry_msgs::PoseStamped::ConstPtr& msg);
 
 int main(int argc, char **argv)
 {
@@ -7,14 +15,9 @@ int main(int argc, char **argv)
     ros::NodeHandle nh;
 
     ros::Subscriber state_sub = nh.subscribe<mavros_msgs::State>
-            ("mavros/state", 10, state_cb);
+            ("mavros/state", 10, state_cb_);
     ros::Subscriber local_pose_sub = nh.subscribe<geometry_msgs::PoseStamped>
-            ("mavros/local_position/pose", 10, localPose_cb);
-    ros::Subscriber batt_sub = nh.subscribe<sensor_msgs::BatteryState> 
-            ("mavros/battery", 10, battery_cb);
-
-    ros::ServiceClient set_mode_client = nh.serviceClient<mavros_msgs::SetMode>
-			("mavros/set_mode");
+            ("mavros/local_position/pose", 10, localPose_cb_);
 
     ros::Publisher local_pos_pub = nh.advertise<geometry_msgs::PoseStamped>
             ("mavros/setpoint_position/local", 10);
@@ -29,17 +32,6 @@ int main(int argc, char **argv)
     }
     std::cout << "[ INFO] FCU connected \n";
 
-    // std::cout << "[ INFO] Waiting for stable initial... \n";
-    
-    // t_check = ros::Time::now();
-    // while (ros::ok() && (ros::Time::now() - t_check) < ros::Duration(20))
-    // {
-    //     ros::spinOnce();
-    //     rate.sleep();
-    // }
-
-    // std::cout << "[ INFO] Stable initial done \n";
-    // ros::Duration(1).sleep();
     for(int i = 50; ros::ok() && i > 0; --i)
     {
         ros::spinOnce();
@@ -69,7 +61,7 @@ int main(int argc, char **argv)
     std::cout << "[ INFO] Set OFFBOARD stream done \n";
 
     std::cout << "[ INFO] Waiting arm and takeoff... \n";
-    while (ros::ok() && !current_state.armed)
+    while (ros::ok() && !current_state.armed && (current_state.mode != "OFFBOARD"))
     {
         ros::spinOnce();
         rate.sleep();
@@ -78,17 +70,10 @@ int main(int argc, char **argv)
     // publish target, keep drone hovering
     while(ros::ok())
     {
-        std::printf("\nCurrent local position: [%.3f, %.3f, %.3f]\n", 
-                        current_pose.pose.position.x, 
-                        current_pose.pose.position.y, 
-                        current_pose.pose.position.z);	
-        batt_percent = current_batt.percentage * 100;
-        std::printf("Current Battery: %.1f \n", batt_percent);
-
         target_pose.header.stamp = ros::Time::now();   
         local_pos_pub.publish(target_pose);
 
-        if (!current_state.armed)
+        if (!current_state.armed && (current_state.mode != "OFFBOARD"))
         {
             break;
         }
@@ -100,4 +85,14 @@ int main(int argc, char **argv)
     }
 
     return 0;
+}
+
+void state_cb_(const mavros_msgs::State::ConstPtr& msg)
+{
+    current_state = *msg;
+}
+
+void localPose_cb_(const geometry_msgs::PoseStamped::ConstPtr& msg)
+{
+    current_pose = *msg;
 }

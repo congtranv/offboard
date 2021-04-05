@@ -5,9 +5,9 @@ zt: 3
 hover_time: 10
 
 num_of_target: 4
-x_pos: [0, 0, 0, 0]
-y_pos: [0, 0, 0, 0]
-z_pos: [8, 5, 7, 3]
+x_pos: [0, 6, 6, 0]
+y_pos: [0, 0, 6, 6]
+z_pos: [5, 6, 7, 8]
 target_error: 0.1
 
 num_of_goal: 3

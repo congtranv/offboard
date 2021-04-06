@@ -22,23 +22,21 @@
 
 ## usage
 
-### 1. CONNECT COMPANION PC TO PIXHAWK or RUN SIMULATION
-#### 1.1 Practice on jetson
+### 1. HOVERING node
+#### 1.1 CONNECT TO PIXHAWK
+##### 1.1.1 Practice on jetson
 - **connect jetson to pixhawk** (*replace fcu_url with your own config*)
 
   ```
   roslaunch mavros px4.launch fcu_url:=/dev/ttyTHS1:921600
   ```
-#### 1.2 run simulation
+##### 1.1.2 run simulation
 - **run px4 simulation with mavros connected**
 
   ```
   roslaunch px4 mavros_posix_sitl.launch
   ```
-
-### 2. RUN OFFBOARD
-#### 2.1 hovering node
-- *run hover_node*: 
+#### 1.2 run *hover_node*: 
 
   ```
   rosrun offboard hover
@@ -46,7 +44,8 @@
 - **check current position on screen**
 
   **input target height for hovering (in meter): z**
-  
+
+#### 1.3 ARM and switch mode 
 - **on remote controller** switch to ARM, then switch flight mode to OFFBOARD
 
   on simualation: 
@@ -54,18 +53,31 @@
   ```
   rosrun offboard setmode_offb
   ```
-### or:
-#### 2.2 offboard node
-- *run offboard_node*: 
+### 2. OFFBOARD node
+#### 2.1 CONNECT TO PIXHAWK
+##### 2.1.1 Practice on jetson
+- **connect jetson to pixhawk** (*replace fcu_url with your own config*)
+
+  ```
+  roslaunch mavros px4.launch fcu_url:=/dev/ttyTHS1:921600
+  ```
+##### 2.1.2 run simulation
+- **run px4 simulation with mavros connected**
+
+  ```
+  roslaunch px4 mavros_posix_sitl.launch
+  ```
+#### 2.2 run *offboard_node*: 
 
   ```
   rosrun offboard offboard
   ```
 - **manual input or load input from waypoints.yaml config file**
   
+#### 2.3 ARM and switch mode
 - **on remote controller** switch to ARM, then switch flight mode to OFFBOARD
 
-  on simualation: 
+- on simualation: 
   
   ```
   rosrun offboard setmode_offb

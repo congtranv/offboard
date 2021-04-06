@@ -170,7 +170,7 @@ void OffboardControl::landing(bool final, geometry_msgs::PoseStamped setpoint, r
 
         if (human_trigger_)
         {
-            std::cout << "\n ! HUMAN DETECTED ! \n ";
+            std::cout << "\n! HUMAN DETECTED !\n ";
             target_pose_ = setpoint;
             local_pos_pub_.publish(target_pose_);
 
@@ -213,7 +213,14 @@ void OffboardControl::landing(bool final, geometry_msgs::PoseStamped setpoint, r
         std::cout << "[ INFO] Return setpoint\n";
         while (ros::ok() && !check)
         {
-            local_pos_pub_.publish(setpoint);
+            std::vector<double> v_return_ = vel_limit(current_pose_, setpoint); 
+            target_pose_.pose.position.x = current_pose_.pose.position.x + v_return_[0];
+            target_pose_.pose.position.y = current_pose_.pose.position.y + v_return_[1];
+            target_pose_.pose.position.z = current_pose_.pose.position.z + v_return_[2];
+
+            target_pose_.header.stamp = ros::Time::now();
+            local_pos_pub_.publish(target_pose_);
+
             check = check_position(check_error_, current_pose_, setpoint);
             if (check)
             {
@@ -248,7 +255,6 @@ void OffboardControl::position_control(bool local_input, ros::Rate rate)
                 // target_pose_.pose.position.y = in_y_pos_[i];
                 // target_pose_.pose.position.z = in_z_pos_[i];
                 vel_ = vel_limit(current_pose_, targetTransfer(in_x_pos_[i], in_y_pos_[i], in_z_pos_[i]));
-                std::printf("%f, %f, %f", vel_[0], vel_[1], vel_[2]);
                 target_pose_.pose.position.x = current_pose_.pose.position.x + vel_[0];
                 target_pose_.pose.position.y = current_pose_.pose.position.y + vel_[1];
                 target_pose_.pose.position.z = current_pose_.pose.position.z + vel_[2];
@@ -266,7 +272,6 @@ void OffboardControl::position_control(bool local_input, ros::Rate rate)
                 // target_pose_.pose.position.y = in_y_pos_[target_num_ - 1];
                 // target_pose_.pose.position.z = in_z_pos_[target_num_ - 1];
                 vel_ = vel_limit(current_pose_, targetTransfer(in_x_pos_[target_num_ - 1], in_y_pos_[target_num_ - 1], in_z_pos_[target_num_ - 1]));
-                std::printf("%f, %f, %f", vel_[0], vel_[1], vel_[2]);
                 target_pose_.pose.position.x = current_pose_.pose.position.x + vel_[0];
                 target_pose_.pose.position.y = current_pose_.pose.position.y + vel_[1];
                 target_pose_.pose.position.z = current_pose_.pose.position.z + vel_[2];
@@ -277,7 +282,6 @@ void OffboardControl::position_control(bool local_input, ros::Rate rate)
         		ros::spinOnce();
                 rate.sleep();
             }
-
             std::printf("\nCurrent local position: [%.3f, %.3f, %.3f]\n", 
                          current_pose_.pose.position.x, 
                          current_pose_.pose.position.y, 
@@ -320,6 +324,7 @@ void OffboardControl::position_control(bool local_input, ros::Rate rate)
         		//     std::cout << "[ INFO] AUTO.LAND enabled \n";
                 //     break;
                 // }
+
                 landing(final_check_, targetTransfer(in_x_pos_[target_num_ - 1], in_y_pos_[target_num_ - 1], in_z_pos_[target_num_ - 1]), rate);
                 break;
 
@@ -344,9 +349,13 @@ void OffboardControl::position_control(bool local_input, ros::Rate rate)
             {
                 final_check_ = false;
                 enu_g_ = WGS84ToENU(goalTransfer(in_latitude_[i], in_longitude_[i], in_altitude_[i]), ref_);
-                target_pose_.pose.position.x = enu_g_.x + x_offset_;
-                target_pose_.pose.position.y = enu_g_.y + y_offset_;
-                target_pose_.pose.position.z = enu_g_.z + z_offset_;
+                // target_pose_.pose.position.x = enu_g_.x + x_offset_;
+                // target_pose_.pose.position.y = enu_g_.y + y_offset_;
+                // target_pose_.pose.position.z = enu_g_.z + z_offset_;
+                vel_ = vel_limit(current_pose_, targetTransfer(enu_g_.x + x_offset_, enu_g_.y + y_offset_, enu_g_.z + z_offset_));
+                target_pose_.pose.position.x = current_pose_.pose.position.x + vel_[0];
+                target_pose_.pose.position.y = current_pose_.pose.position.y + vel_[1];
+                target_pose_.pose.position.z = current_pose_.pose.position.z + vel_[2];
                 
                 target_pose_.header.stamp = ros::Time::now();
                 local_pos_pub_.publish(target_pose_);
@@ -358,9 +367,13 @@ void OffboardControl::position_control(bool local_input, ros::Rate rate)
             {
                 final_check_ = true;
                 enu_g_ = WGS84ToENU(goalTransfer(in_latitude_[goal_num_ -1], in_longitude_[goal_num_ -1], in_altitude_[goal_num_ -1]), ref_);
-                target_pose_.pose.position.x = enu_g_.x + x_offset_;
-                target_pose_.pose.position.y = enu_g_.y + y_offset_;
-                target_pose_.pose.position.z = enu_g_.z + z_offset_;
+                // target_pose_.pose.position.x = enu_g_.x + x_offset_;
+                // target_pose_.pose.position.y = enu_g_.y + y_offset_;
+                // target_pose_.pose.position.z = enu_g_.z + z_offset_;
+                vel_ = vel_limit(current_pose_, targetTransfer(enu_g_.x + x_offset_, enu_g_.y + y_offset_, enu_g_.z + z_offset_));
+                target_pose_.pose.position.x = current_pose_.pose.position.x + vel_[0];
+                target_pose_.pose.position.y = current_pose_.pose.position.y + vel_[1];
+                target_pose_.pose.position.z = current_pose_.pose.position.z + vel_[2];
                 
                 target_pose_.header.stamp = ros::Time::now();
                 local_pos_pub_.publish(target_pose_);
@@ -386,15 +399,10 @@ void OffboardControl::position_control(bool local_input, ros::Rate rate)
             distance_ = distanceLocal(current_pose_, target_pose_);
             std::printf("Distance to target: %.3f m \n", distance_);
 
-			system("rosparam load $HOME/ros/catkin_ws/src/offboard/config/waypoints.yaml");
-			ros::param::get("hover_time", t_hover_);
-
-            bool check = check_position(check_error_, current_pose_, target_pose_);
-
+            bool check = check_position(check_error_, current_pose_, targetTransfer(enu_g_.x + x_offset_, enu_g_.y + y_offset_, enu_g_.z + z_offset_));
             std::cout << "\n" << check << std::endl;
             if (check && !final_check_)
             {
-                t_check_ = ros::Time::now();
                 std::printf("[ INFO] Reached position: [%.8f, %.8f, %.3f]\n", 
                                 global_position_.latitude, 
                                 global_position_.longitude, 
@@ -405,18 +413,12 @@ void OffboardControl::position_control(bool local_input, ros::Rate rate)
                                 current_pose_.pose.position.y, 
                                 current_pose_.pose.position.z);   
                 std::printf("[ INFO] Target local position: [%.3f, %.3f, %.3f]\n", 
-                                target_pose_.pose.position.x, 
-                                target_pose_.pose.position.y,
-                                target_pose_.pose.position.z);
-                std::cout << "[ INFO] Hover at checkpoint \n";
-
-                while ((ros::Time::now() - t_check_) < ros::Duration(t_hover_))
-                {
-                    local_pos_pub_.publish(target_pose_);
-
-                    ros::spinOnce();
-    		        rate.sleep();
-                }
+                            targetTransfer(enu_g_.x + x_offset_, enu_g_.y + y_offset_, enu_g_.z + z_offset_).pose.position.x, 
+                            targetTransfer(enu_g_.x + x_offset_, enu_g_.y + y_offset_, enu_g_.z + z_offset_).pose.position.y,
+                            targetTransfer(enu_g_.x + x_offset_, enu_g_.y + y_offset_, enu_g_.z + z_offset_).pose.position.z);
+                
+                hover(targetTransfer(enu_g_.x + x_offset_, enu_g_.y + y_offset_, enu_g_.z + z_offset_), rate);
+                landing(final_check_, targetTransfer(enu_g_.x + x_offset_, enu_g_.y + y_offset_, enu_g_.z + z_offset_), rate);
 
                 i = i + 1;
                 ros::spinOnce();
@@ -424,35 +426,14 @@ void OffboardControl::position_control(bool local_input, ros::Rate rate)
             }
             else if (check && final_check_)
             {
-                t_check_ = ros::Time::now();
                 std::printf("[ INFO] Reached FINAL position: [%.8f, %.8f, %.3f]\n", 
                                 global_position_.latitude, 
                                 global_position_.longitude, 
                                 global_position_.altitude);
-                std::printf("[ INFO] Reached local position: [%.3f, %.3f, %.3f]\n", 
-                                current_pose_.pose.position.x, 
-                                current_pose_.pose.position.y, 
-                                current_pose_.pose.position.z);
-                std::printf("[ INFO] Target local position: [%.3f, %.3f, %.3f]\n", 
-                                target_pose_.pose.position.x, 
-                                target_pose_.pose.position.y,
-                                target_pose_.pose.position.z);
-                std::printf("[ INFO] Ready to LANDING \n");
-
-                while ((ros::Time::now() - t_check_) < ros::Duration(t_hover_))
-                {
-                    local_pos_pub_.publish(target_pose_);
-
-                    ros::spinOnce();
-    		        rate.sleep();
-                }
-
-                set_mode_.request.custom_mode = "AUTO.LAND";
-                if( set_mode_client_.call(set_mode_) && set_mode_.response.mode_sent)
-                {
-                    std::cout << "[ INFO] AUTO.LAND enabled \n";
-                    break;
-                }
+                
+                hover(targetTransfer(enu_g_.x + x_offset_, enu_g_.y + y_offset_, enu_g_.z + z_offset_), rate);
+                landing(final_check_, targetTransfer(enu_g_.x + x_offset_, enu_g_.y + y_offset_, enu_g_.z + z_offset_), rate);
+                break;
 
                 ros::spinOnce();
                 rate.sleep();
@@ -606,6 +587,7 @@ void OffboardControl::input_global_target()
 		std::cout << "Latitude " << i+1 << " (in degree): "; std::cin >> in_latitude_[i];
 		std::cout << "Longitude " << i+1 << " (in degree): "; std::cin >> in_longitude_[i];
 		std::cout << "Altitude " << i+1 << "  (in meter): "; std::cin >> in_altitude_[i];
+        in_altitude_[i] += global_position_.altitude;
 	}
 	int count = 0;
 	while (check_error_ < 0 || check_error_ > 1) 
@@ -671,7 +653,7 @@ void OffboardControl::input_target()
 		ros::param::get("altitude", in_altitude_);
 		ros::param::get("goal_error", global_error_);
 
-		std::cout << "Waypoint type: (3) Local || (4) Global ? (3/4) \n"; std::cin >> c;
+		std::cout << "Waypoint type: (3) Local || Global (4) ? (3/4) \n"; std::cin >> c;
 		if (c == '3')
 		{
 			local_input_ = true;
@@ -690,6 +672,7 @@ void OffboardControl::input_target()
 			check_error_ = global_error_;
 			for (int i = 0; i < goal_num_; i++)
 			{
+                in_altitude_[i] += global_position_.altitude;
 				std::cout << "Goal (" << i+1 << "): [" << in_latitude_[i] << ", "
 													   << in_longitude_[i] << ", "
 													   << in_altitude_[i] << "]" << std::endl;

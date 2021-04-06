@@ -43,12 +43,15 @@ const double e_sq = f * (2 - f);    // Square of Eccentricity
 
 bool global_position_received = false; // = false; // check receive global position
 bool gps_position_received = false; // = false; // check receive GPS raw position
+bool local_input_ = true; // true == input local || false == input global setpoints
 
 mavros_msgs::State current_state_; // check connection to pixhawk
 mavros_msgs::GPSRAW gps_position_; // gps raw position from pixhawk
 geometry_msgs::PoseStamped current_pose_; // current local position
 sensor_msgs::NavSatFix global_position_; // global position
-sensor_msgs::NavSatFix goalTransfer(double, double, double);
+
+sensor_msgs::NavSatFix goalTransfer(double lat, double lon, double alt); // transfer lat, lon, alt setpoint vectors to same message type with global_position
+geometry_msgs::PoseStamped targetTransfer(double x, double y, double z);
 
 inline void state_cb(const mavros_msgs::State::ConstPtr& msg);
 inline void localPose_cb(const geometry_msgs::PoseStamped::ConstPtr& msg);
@@ -79,9 +82,12 @@ private:
     double x_off_[100], y_off_[100], z_off_[100]; // store a series of offset between local position and ENU converted from global position
     double x_offset_, y_offset_, z_offset_;
 
-    bool final_check_ = false; // true == reached final point || false == NOT final point
-    bool local_input_ = true; // true == input local || false == input global setpoints
+    double vel_desired_; // desired velocity
+    std::vector<double> vel_;
 
+    bool final_check_ = false; // true == reached final point || false == NOT final point
+    bool human_trigger_ = false; 
+    
     int target_num_; // number of local position setpoints
     std::vector<double> in_x_pos_; // vector to store in x position
     std::vector<double> in_y_pos_; // vector to store in y position
@@ -95,6 +101,7 @@ private:
 
     mavros_msgs::SetMode set_mode_; // set OFFBOARD mode in simulation
     geometry_msgs::PoseStamped target_pose_; // target local setpoint
+    geometry_msgs::PoseStamped take_off_;
     geographic_msgs::GeoPoseStamped goal_position_; // goal position 
     sensor_msgs::Imu imu_data_; // imu data from pixhawk
     sensor_msgs::MagneticField mag_data_; // magnetometer data
@@ -127,20 +134,14 @@ private:
 public:
     OffboardControl();
   
-    void position_pub(ros::NodeHandle nh);
+    void initial_state(ros::NodeHandle nh, ros::Rate rate);
+    void takeOff(ros::Rate rate);
+    void hover(geometry_msgs::PoseStamped target, ros::Rate rate);
+    void landing(bool final, geometry_msgs::PoseStamped setpoint, ros::Rate rate);
     void position_control(bool local, ros::Rate rate);
+    std::vector<double> vel_limit(geometry_msgs::PoseStamped current, geometry_msgs::PoseStamped target);
 
     ~OffboardControl();  
-
 };
-
-sensor_msgs::NavSatFix goalTransfer(double lat, double lon, double alt)
-{
-    sensor_msgs::NavSatFix goal;
-    goal.latitude = lat;
-    goal.longitude = lon;
-    goal.altitude = alt;
-    return goal;
-}
 
 #endif

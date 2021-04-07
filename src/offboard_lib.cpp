@@ -24,6 +24,7 @@ void gpsPosition_cb(const mavros_msgs::GPSRAW::ConstPtr& msg)
     gps_position_received = true;
 }
 
+/*
 void OffboardControl::initial_state(ros::NodeHandle nh, ros::Rate rate)
 {
 	nh_ = nh;
@@ -116,7 +117,8 @@ void OffboardControl::initial_state(ros::NodeHandle nh, ros::Rate rate)
         rate.sleep();
     }
     std::cout << "[ INFO] --------------- READY --------------- \n";
-}
+} 
+*/
 
 void OffboardControl::takeOff(ros::Rate rate)
 {
@@ -245,10 +247,103 @@ void OffboardControl::landing(bool final, geometry_msgs::PoseStamped setpoint, r
     }
 }
 
-void OffboardControl::position_control(bool local_input, ros::Rate rate)
+void OffboardControl::position_control(ros::NodeHandle nh, bool local_input, ros::Rate rate)
 {
+    nh_ = nh;
+	state_sub_ = nh_.subscribe<mavros_msgs::State>("mavros/state", 10, state_cb);
+	local_pose_sub_ = nh_.subscribe<geometry_msgs::PoseStamped>("mavros/local_position/pose", 10, localPose_cb);
+	global_pos_sub_ = nh_.subscribe<sensor_msgs::NavSatFix>("mavros/global_position/global", 10, globalPosition_cb);
+	gps_pos_sub_ = nh_.subscribe<mavros_msgs::GPSRAW>("mavros/gpsstatus/gps1/raw", 10, gpsPosition_cb);
+
+	local_pos_pub_ = nh_.advertise<geometry_msgs::PoseStamped>("mavros/setpoint_position/local", 10);
+
+	set_mode_client_ = nh_.serviceClient<mavros_msgs::SetMode>("mavros/set_mode");
+	arming_client_ = nh_.serviceClient<mavros_msgs::CommandBool>("/mavros/cmd/arming");
+    
+    // wait for FCU connection
+    std::cout << "[ INFO] ----- Waiting for FCU connection \n";
+    while(ros::ok() && !current_state_.connected)
+	{
+        ros::spinOnce();
+        rate.sleep();
+    }
+    std::cout << "[ INFO] FCU connected \n";
+    // wait for GPS information
+    std::cout << "[ INFO] ----- Waiting for GPS signal \n";
+    while (ros::ok() && !global_position_received && !gps_position_received) 
+    {
+        ros::spinOnce();
+        rate.sleep();
+    }
+    std::cout << "[ INFO] GPS position received \n";
+	std::cout << "[ INFO] ----- Waiting for stable initial \n";
+    t_check_ = ros::Time::now();
+    while (ros::ok() && (ros::Time::now() - t_check_) < ros::Duration(20))
+    {
+        ros::spinOnce();
+        rate.sleep();
+    }
+    std::cout << "[ INFO] Init stable done \n";
+
+	// init reference point
+    ref_.latitude = global_position_.latitude;
+    ref_.longitude = global_position_.longitude;
+    ref_.altitude = global_position_.altitude;
+	for(int i = 100; ros::ok() && i > 0; --i)
+    {
+        enu_c_ = WGS84ToENU(global_position_, ref_);
+        x_off_[i] = current_pose_.pose.position.x - enu_c_.x;
+        y_off_[i] = current_pose_.pose.position.y - enu_c_.y;
+        z_off_[i] = current_pose_.pose.position.z - enu_c_.z;
+
+        ros::spinOnce();
+        rate.sleep();
+    }
+    for(int i = 100; i > 0; --i)
+    {
+        x_offset_ = x_offset_ + x_off_[i]/100;
+        y_offset_ = y_offset_ + y_off_[i]/100;
+        z_offset_ = z_offset_ + z_off_[i]/100;
+    }
+
+	input_target();
+    if (local_input_ == true) // local setpoint
+    {
+        target_pose_.pose.position.x = in_x_pos_[0];
+        target_pose_.pose.position.y = in_y_pos_[0];
+        target_pose_.pose.position.z = in_z_pos_[0];
+    }
+    else // global setpoint
+    {
+        enu_g_ = WGS84ToENU(goalTransfer(in_latitude_[0], in_longitude_[0], in_altitude_[0]), ref_);
+        target_pose_.pose.position.x = enu_g_.x + x_offset_;
+        target_pose_.pose.position.y = enu_g_.y + y_offset_;
+        target_pose_.pose.position.z = enu_g_.z + z_offset_;
+    }
+
+    // send a few setpoints before starting
+    std::cout << "[ INFO] ----- Setting OFFBOARD stream \n";
+    for(int i = 100; ros::ok() && i > 0; --i)
+    {
+        target_pose_.header.stamp = ros::Time::now();
+        local_pos_pub_.publish(target_pose_);
+        ros::spinOnce();
+        rate.sleep();
+    }
+    std::cout << "[ INFO] Set OFFBOARD stream done \n";
+
+    std::cout << "[ INFO] ----- Waiting OFFBOARD switch \n";
+    while (ros::ok() && !current_state_.armed && (current_state_.mode != "OFFBOARD"))
+    {
+        ros::spinOnce();
+        rate.sleep();
+    }
+    std::cout << "[ INFO] --------------- READY --------------- \n";
+
+    takeOff(rate);
+
 	int i = 0;
-	if (local_input_)
+	if (local_input)
 	{
 		while (ros::ok())
         {
@@ -308,7 +403,7 @@ void OffboardControl::position_control(bool local_input, ros::Rate rate)
                 
                 std::cout << "\n[ INFO] ----- Hovering \n";
                 hover(targetTransfer(in_x_pos_[i], in_y_pos_[i], in_z_pos_[i]), rate);
-                landing(final_check_, targetTransfer(in_x_pos_[i], in_y_pos_[i], in_z_pos_[i]), rate);
+                // landing(final_check_, targetTransfer(in_x_pos_[i], in_y_pos_[i], in_z_pos_[i]), rate);
 
                 i = i + 1;
                 ros::spinOnce();
@@ -418,7 +513,7 @@ void OffboardControl::position_control(bool local_input, ros::Rate rate)
                 
                 std::cout << "\n[ INFO] ----- Hovering \n";
                 hover(targetTransfer(enu_g_.x + x_offset_, enu_g_.y + y_offset_, enu_g_.z + z_offset_), rate);
-                landing(final_check_, targetTransfer(enu_g_.x + x_offset_, enu_g_.y + y_offset_, enu_g_.z + z_offset_), rate);
+                // landing(final_check_, targetTransfer(enu_g_.x + x_offset_, enu_g_.y + y_offset_, enu_g_.z + z_offset_), rate);
 
                 i = i + 1;
                 ros::spinOnce();

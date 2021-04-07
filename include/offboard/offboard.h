@@ -134,11 +134,11 @@ private:
 public:
     OffboardControl();
   
-    void initial_state(ros::NodeHandle nh, ros::Rate rate);
+    // void initial_state(ros::NodeHandle nh, ros::Rate rate);
     void takeOff(ros::Rate rate);
     void hover(geometry_msgs::PoseStamped target, ros::Rate rate);
     void landing(bool final, geometry_msgs::PoseStamped setpoint, ros::Rate rate);
-    void position_control(bool local, ros::Rate rate);
+    void position_control(ros::NodeHandle nh, bool local, ros::Rate rate);
     std::vector<double> vel_limit(geometry_msgs::PoseStamped current, geometry_msgs::PoseStamped target);
 
     ~OffboardControl();  

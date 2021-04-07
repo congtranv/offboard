@@ -2,7 +2,7 @@
 # y_takeoff: current position y
 z_takeoff: 3 # m
 
-hover_time: 5 # second(s)
+hover_time: 10 # second(s)
 
 num_of_target: 4
 x_pos: [0, 6, 6, 0] # m

@@ -12,7 +12,7 @@ int main(int argc, char **argv)
     OffboardControl offboard;
     // offboard.initial_state(nh, rate_);
     // offboard.takeOff(rate_);
-    offboard.position_control(nh, local_input_, rate_);
+    offboard.position_control(nh, rate_);
 
     return 0;
 }

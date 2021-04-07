@@ -122,20 +122,21 @@ void OffboardControl::initial_state(ros::NodeHandle nh, ros::Rate rate)
 
 void OffboardControl::takeOff(ros::Rate rate)
 {
+    geometry_msgs::PoseStamped take_off_;
     take_off_.pose.position.x = current_pose_.pose.position.x;
     take_off_.pose.position.y = current_pose_.pose.position.y;
     system("rosparam load $HOME/ros/catkin_ws/src/offboard/config/waypoints.yaml");
     ros::param::get("z_takeoff", take_off_.pose.position.z);
     std::cout << "[ INFO] ----- Takeoff \n";
     
-    bool check = false;
-    while (ros::ok() && !check)
+    bool check_takeoff = false;
+    while (ros::ok() && !check_takeoff)
     {
         take_off_.header.stamp = ros::Time::now();
         local_pos_pub_.publish(take_off_);
 
-        check = check_position(check_error_, current_pose_, take_off_);
-        if (check)
+        check_takeoff = check_position(check_error_, current_pose_, take_off_);
+        if (check_takeoff)
         {
             std::cout << "[ INFO] ----- Hovering \n";
             hover(take_off_, rate);
@@ -150,6 +151,7 @@ void OffboardControl::hover(geometry_msgs::PoseStamped target, ros::Rate rate)
 {
     system("rosparam load $HOME/ros/catkin_ws/src/offboard/config/waypoints.yaml");
 	ros::param::get("hover_time", t_hover_);
+    ros::Time t_check_;
     t_check_ = ros::Time::now();
 
     while ((ros::Time::now() - t_check_) < ros::Duration(t_hover_))
@@ -163,9 +165,9 @@ void OffboardControl::hover(geometry_msgs::PoseStamped target, ros::Rate rate)
 
 void OffboardControl::landing(bool final, geometry_msgs::PoseStamped setpoint, ros::Rate rate)
 {
-    bool check = false;
+    bool check_target = false;
     std::cout << "\n[ INFO] ----- Descending \n";
-    while (ros::ok() && !check)
+    while (ros::ok() && !check_target)
     {
         system("rosparam load $HOME/ros/catkin_ws/src/offboard/config/waypoints.yaml");
 	    ros::param::get("human_trigger", human_trigger_);
@@ -189,65 +191,59 @@ void OffboardControl::landing(bool final, geometry_msgs::PoseStamped setpoint, r
 
             target_pose_.header.stamp = ros::Time::now();
             local_pos_pub_.publish(target_pose_);
-
+            
             std::printf("----- Descending - %.3f (m)\n", current_pose_.pose.position.z);
             
             ros::spinOnce();
             rate.sleep();
         }
-        check = check_position(check_error_, current_pose_, targetTransfer(setpoint.pose.position.x, setpoint.pose.position.y, 0));
-        if (check)
+        
+        check_target = check_position(check_error_, current_pose_, targetTransfer(setpoint.pose.position.x, setpoint.pose.position.y, 0));
+        if (check_target)
         {
             if (!final)
             {
                 std::cout << "[ INFO] ----- Unpacking \n";
                 hover(targetTransfer(setpoint.pose.position.x, setpoint.pose.position.y, 0), rate);
                 std::cout << "[ INFO] Unpacked\n";
+
+                std::cout << "[ INFO] ----- Return setpoint\n";
+                bool check_return = false;
+                while (ros::ok() && !check_return)
+                {
+                    std::vector<double> v_return_ = vel_limit(current_pose_, setpoint); 
+                    target_pose_.pose.position.x = current_pose_.pose.position.x + v_return_[0];
+                    target_pose_.pose.position.y = current_pose_.pose.position.y + v_return_[1];
+                    target_pose_.pose.position.z = current_pose_.pose.position.z + v_return_[2];
+
+                    target_pose_.header.stamp = ros::Time::now();
+                    local_pos_pub_.publish(target_pose_);
+
+                    std::printf("----- Ascending - %.3f (m)\n", current_pose_.pose.position.z);
+                    check_return = check_position(check_error_, current_pose_, setpoint);
+                    if (check_return)
+                    {
+                        std::cout << "[ INFO] ----- Hovering \n";
+                        hover(setpoint, rate);
+                    }
+                    ros::spinOnce();
+                    rate.sleep();
+                }
             }
             else
             {
                 std::printf("[ INFO] --------------- LAND ---------------\n");
+                set_mode_.request.custom_mode = "AUTO.LAND";
+                if( set_mode_client_.call(set_mode_) && set_mode_.response.mode_sent)
+                {
+                    std::cout << "[ INFO] AUTO.LAND \n";
+                }
             }
-        }
-    }
-    check = false;
-    if (!final)
-    {
-        std::cout << "[ INFO] ----- Return setpoint\n";
-        while (ros::ok() && !check)
-        {
-            std::vector<double> v_return_ = vel_limit(current_pose_, setpoint); 
-            target_pose_.pose.position.x = current_pose_.pose.position.x + v_return_[0];
-            target_pose_.pose.position.y = current_pose_.pose.position.y + v_return_[1];
-            target_pose_.pose.position.z = current_pose_.pose.position.z + v_return_[2];
-
-            target_pose_.header.stamp = ros::Time::now();
-            local_pos_pub_.publish(target_pose_);
-
-            std::printf("----- Ascending - %.3f (m)\n", current_pose_.pose.position.z);
-
-            check = check_position(check_error_, current_pose_, setpoint);
-            if (check)
-            {
-                std::cout << "[ INFO] ----- Hovering \n";
-                hover(setpoint, rate);
-            }
-            ros::spinOnce();
-            rate.sleep();
-        }
-    }
-    else
-    {
-        
-    	set_mode_.request.custom_mode = "AUTO.LAND";
-     	if( set_mode_client_.call(set_mode_) && set_mode_.response.mode_sent)
-        {
-        	std::cout << "[ INFO] AUTO.LAND \n";
         }
     }
 }
 
-void OffboardControl::position_control(ros::NodeHandle nh, bool local_input, ros::Rate rate)
+void OffboardControl::position_control(ros::NodeHandle nh, ros::Rate rate)
 {
     nh_ = nh;
 	state_sub_ = nh_.subscribe<mavros_msgs::State>("mavros/state", 10, state_cb);
@@ -277,6 +273,8 @@ void OffboardControl::position_control(ros::NodeHandle nh, bool local_input, ros
     }
     std::cout << "[ INFO] GPS position received \n";
 	std::cout << "[ INFO] ----- Waiting for stable initial \n";
+    
+    ros::Time t_check_;
     t_check_ = ros::Time::now();
     while (ros::ok() && (ros::Time::now() - t_check_) < ros::Duration(20))
     {
@@ -307,6 +305,7 @@ void OffboardControl::position_control(ros::NodeHandle nh, bool local_input, ros
     }
 
 	input_target();
+
     if (local_input_ == true) // local setpoint
     {
         target_pose_.pose.position.x = in_x_pos_[0];
@@ -343,7 +342,7 @@ void OffboardControl::position_control(ros::NodeHandle nh, bool local_input, ros
     takeOff(rate);
 
 	int i = 0;
-	if (local_input)
+	if (local_input_)
 	{
 		while (ros::ok())
         {
@@ -390,7 +389,7 @@ void OffboardControl::position_control(ros::NodeHandle nh, bool local_input, ros
             distance_ = distanceLocal(current_pose_, targetTransfer(in_x_pos_[i], in_y_pos_[i], in_z_pos_[i]));
             std::printf("Distance to target: %.3f (m) \n", distance_);
 
-            bool check = check_position(check_error_, current_pose_,targetTransfer(in_x_pos_[i], in_y_pos_[i], in_z_pos_[i])); //target_pose_);
+            bool check = check_position(check_error_, current_pose_, targetTransfer(in_x_pos_[i], in_y_pos_[i], in_z_pos_[i])); //target_pose_);
             std::cout << "\n" << check << std::endl;
             if(check && !final_check_)
             {
@@ -399,7 +398,7 @@ void OffboardControl::position_control(ros::NodeHandle nh, bool local_input, ros
                                 current_pose_.pose.position.y, 
                                 current_pose_.pose.position.z);   
                 std::printf("[ INFO] Target position: [%.3f, %.3f, %.3f]\n", in_x_pos_[i], in_y_pos_[i], in_z_pos_[i]);
-                std::printf("[ INFO] Next target: [%.3f, %.3f, %.3f\n", in_x_pos_[i+1], in_y_pos_[i+1], in_z_pos_[i+1]);
+                std::printf("[ INFO] Next target: [%.3f, %.3f, %.3f]\n", in_x_pos_[i+1], in_y_pos_[i+1], in_z_pos_[i+1]);
                 
                 std::cout << "\n[ INFO] ----- Hovering \n";
                 hover(targetTransfer(in_x_pos_[i], in_y_pos_[i], in_z_pos_[i]), rate);
@@ -445,35 +444,36 @@ void OffboardControl::position_control(ros::NodeHandle nh, bool local_input, ros
                 // target_pose_.pose.position.x = enu_g_.x + x_offset_;
                 // target_pose_.pose.position.y = enu_g_.y + y_offset_;
                 // target_pose_.pose.position.z = enu_g_.z + z_offset_;
-                vel_ = vel_limit(current_pose_, targetTransfer(enu_g_.x + x_offset_, enu_g_.y + y_offset_, enu_g_.z + z_offset_));
-                target_pose_.pose.position.x = current_pose_.pose.position.x + vel_[0];
-                target_pose_.pose.position.y = current_pose_.pose.position.y + vel_[1];
-                target_pose_.pose.position.z = current_pose_.pose.position.z + vel_[2];
+                // vel_ = vel_limit(current_pose_, targetTransfer(enu_g_.x + x_offset_, enu_g_.y + y_offset_, enu_g_.z + z_offset_));
+                // target_pose_.pose.position.x = current_pose_.pose.position.x + vel_[0];
+                // target_pose_.pose.position.y = current_pose_.pose.position.y + vel_[1];
+                // target_pose_.pose.position.z = current_pose_.pose.position.z + vel_[2];
                 
-                target_pose_.header.stamp = ros::Time::now();
-                local_pos_pub_.publish(target_pose_);
+                // target_pose_.header.stamp = ros::Time::now();
+                // local_pos_pub_.publish(target_pose_);
 
-                ros::spinOnce();
-                rate.sleep();
+                // ros::spinOnce();
+                // rate.sleep();
             }
             else
             {
                 final_check_ = true;
                 enu_g_ = WGS84ToENU(goalTransfer(in_latitude_[goal_num_ -1], in_longitude_[goal_num_ -1], in_altitude_[goal_num_ -1]), ref_);
+            }
                 // target_pose_.pose.position.x = enu_g_.x + x_offset_;
                 // target_pose_.pose.position.y = enu_g_.y + y_offset_;
                 // target_pose_.pose.position.z = enu_g_.z + z_offset_;
-                vel_ = vel_limit(current_pose_, targetTransfer(enu_g_.x + x_offset_, enu_g_.y + y_offset_, enu_g_.z + z_offset_));
-                target_pose_.pose.position.x = current_pose_.pose.position.x + vel_[0];
-                target_pose_.pose.position.y = current_pose_.pose.position.y + vel_[1];
-                target_pose_.pose.position.z = current_pose_.pose.position.z + vel_[2];
+            vel_ = vel_limit(current_pose_, targetTransfer(enu_g_.x + x_offset_, enu_g_.y + y_offset_, enu_g_.z + z_offset_));
+            target_pose_.pose.position.x = current_pose_.pose.position.x + vel_[0];
+            target_pose_.pose.position.y = current_pose_.pose.position.y + vel_[1];
+            target_pose_.pose.position.z = current_pose_.pose.position.z + vel_[2];
                 
-                target_pose_.header.stamp = ros::Time::now();
-                local_pos_pub_.publish(target_pose_);
+            target_pose_.header.stamp = ros::Time::now();
+            local_pos_pub_.publish(target_pose_);
 
-                ros::spinOnce();
-                rate.sleep();
-            }
+            ros::spinOnce();
+            rate.sleep();
+            // }
             std::printf("\nCurrent GPS position: [%.8f, %.8f, %.3f]\n", 
                         global_position_.latitude, 
                         global_position_.longitude, 
@@ -501,7 +501,6 @@ void OffboardControl::position_control(ros::NodeHandle nh, bool local_input, ros
                                 global_position_.longitude, 
                                 global_position_.altitude);
                 std::printf("[ INFO] Goal GPS: [%.8f, %.8f, %.3f]\n", in_latitude_[i], in_latitude_[i], in_altitude_[i]);
-                std::printf("[ INFO] Next goal: [%.8f, %.8f, %.3f]\n", in_latitude_[i+1], in_latitude_[i+1], in_altitude_[i+1]);
                 std::printf("[ INFO] Converted position: [%.3f, %.3f, %.3f]\n", 
                                 current_pose_.pose.position.x, 
                                 current_pose_.pose.position.y, 
@@ -510,6 +509,7 @@ void OffboardControl::position_control(ros::NodeHandle nh, bool local_input, ros
                             targetTransfer(enu_g_.x + x_offset_, enu_g_.y + y_offset_, enu_g_.z + z_offset_).pose.position.x, 
                             targetTransfer(enu_g_.x + x_offset_, enu_g_.y + y_offset_, enu_g_.z + z_offset_).pose.position.y,
                             targetTransfer(enu_g_.x + x_offset_, enu_g_.y + y_offset_, enu_g_.z + z_offset_).pose.position.z);
+                std::printf("[ INFO] Next goal: [%.8f, %.8f, %.3f]\n", in_latitude_[i+1], in_latitude_[i+1], in_altitude_[i+1]);
                 
                 std::cout << "\n[ INFO] ----- Hovering \n";
                 hover(targetTransfer(enu_g_.x + x_offset_, enu_g_.y + y_offset_, enu_g_.z + z_offset_), rate);
@@ -590,11 +590,11 @@ bool OffboardControl::check_position(float error, geometry_msgs::PoseStamped cur
 	&& ((yt - error) < yc) && (yc < (yt + error))
 	&& ((zt - error) < zc) && (zc < (zt + error)))
 	{
-		return 1;
+		return true;
 	}
 	else
 	{
-		return 0;
+		return false;
 	}
 }
 
@@ -625,11 +625,11 @@ bool OffboardControl::check_orientation(float error, geometry_msgs::PoseStamped 
 	 &&(((degree(pt)-1)<(degree(pc)))&&(degree(pc)<(degree(pt)+1)))
 	 &&(((degree(yt)-1)<(degree(yc)))&&(degree(yc)<(degree(yt)+1)))) 
 	{
-		return 1;
+		return true;
 	}
 	else
 	{
-		return 0;
+		return false;
 	}
 }
 

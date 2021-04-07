@@ -73,7 +73,7 @@ private:
     ros::ServiceClient set_mode_client_;
     ros::ServiceClient arming_client_;
 
-    ros::Time t_check_; // store ros time when need a time trigger
+    // ros::Time t_check_; // store ros time when need a time trigger
     float t_hover_; // time set to drone when hovering
     double gps_lat, gps_lon, gps_alt; // gps latitude, longitude, altitude
     float local_error_, global_error_; // offset for checking when drone go to near setpoints for local and global 
@@ -101,7 +101,7 @@ private:
 
     mavros_msgs::SetMode set_mode_; // set OFFBOARD mode in simulation
     geometry_msgs::PoseStamped target_pose_; // target local setpoint
-    geometry_msgs::PoseStamped take_off_;
+    // geometry_msgs::PoseStamped take_off_;
     geographic_msgs::GeoPoseStamped goal_position_; // goal position 
     sensor_msgs::Imu imu_data_; // imu data from pixhawk
     sensor_msgs::MagneticField mag_data_; // magnetometer data
@@ -138,7 +138,7 @@ public:
     void takeOff(ros::Rate rate);
     void hover(geometry_msgs::PoseStamped target, ros::Rate rate);
     void landing(bool final, geometry_msgs::PoseStamped setpoint, ros::Rate rate);
-    void position_control(ros::NodeHandle nh, bool local, ros::Rate rate);
+    void position_control(ros::NodeHandle nh, ros::Rate rate);
     std::vector<double> vel_limit(geometry_msgs::PoseStamped current, geometry_msgs::PoseStamped target);
 
     ~OffboardControl();  

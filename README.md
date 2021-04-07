@@ -61,6 +61,16 @@
   ```
   roslaunch mavros px4.launch fcu_url:=/dev/ttyTHS1:921600
   ```
+  ***
+  in this terminal, run  `param set COM_DISARM_LAND -1`  to disable auto disarm when land of pixhawk:
+  ```
+  pxh> param set COM_DISARM_LAND -1
+  ```
+  when practice done, set COM_DISARM_LAND to 2 for enable auto disarm after land 2 seconds:
+  ```
+  pxh> param set COM_DISARM_LAND 2
+  ```
+  ***
 ##### 2.1.2 run simulation
 - **run px4 simulation with mavros connected**
 

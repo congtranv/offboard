@@ -16,5 +16,5 @@ longitude: [105.842895, 105.842945, 105.842985]
 altitude: [5, 6, 7] # m
 goal_error: 0.3 # m
 
-v_desired: 2 # m/s
+v_desired: 0.3 # m/s
 human_trigger: false

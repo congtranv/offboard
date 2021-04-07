@@ -170,7 +170,7 @@ void OffboardControl::landing(bool final, geometry_msgs::PoseStamped setpoint, r
 
         if (human_trigger_)
         {
-            std::cout << "\n! HUMAN DETECTED !\n ";
+            std::cout << "\n! HUMAN DETECTED !\n";
             target_pose_ = setpoint;
             local_pos_pub_.publish(target_pose_);
 
@@ -872,7 +872,6 @@ geometry_msgs::PoseStamped targetTransfer(double x, double y, double z)
     target.pose.position.z = z;
     return target;
 }
-
 
 OffboardControl::~OffboardControl()
 {

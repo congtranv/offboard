@@ -417,8 +417,15 @@ void OffboardControl::position_control(ros::NodeHandle nh, ros::Rate rate)
 
                 std::cout << "\n[ INFO] ----- Hovering \n";
                 hover(targetTransfer(in_x_pos_[target_num_ - 1], in_y_pos_[target_num_ - 1], in_z_pos_[target_num_ - 1]), rate);
-                landing(final_check_, targetTransfer(in_x_pos_[target_num_ - 1], in_y_pos_[target_num_ - 1], in_z_pos_[target_num_ - 1]), rate);
-                break;
+                // landing(final_check_, targetTransfer(in_x_pos_[target_num_ - 1], in_y_pos_[target_num_ - 1], in_z_pos_[target_num_ - 1]), rate);
+                // break;
+                std::printf("[ INFO] --------------- LAND ---------------\n");
+                set_mode_.request.custom_mode = "AUTO.LAND";
+                if( set_mode_client_.call(set_mode_) && set_mode_.response.mode_sent)
+                {
+                    std::cout << "[ INFO] AUTO.LAND \n";
+                    break;
+                }
 
                 ros::spinOnce();
     		    rate.sleep();
@@ -528,8 +535,15 @@ void OffboardControl::position_control(ros::NodeHandle nh, ros::Rate rate)
                 
                 std::cout << "\n[ INFO] ----- Hovering \n";
                 hover(targetTransfer(enu_g_.x + x_offset_, enu_g_.y + y_offset_, enu_g_.z + z_offset_), rate);
-                landing(final_check_, targetTransfer(enu_g_.x + x_offset_, enu_g_.y + y_offset_, enu_g_.z + z_offset_), rate);
-                break;
+                // landing(final_check_, targetTransfer(enu_g_.x + x_offset_, enu_g_.y + y_offset_, enu_g_.z + z_offset_), rate);
+                // break;
+                std::printf("[ INFO] --------------- LAND ---------------\n");
+                set_mode_.request.custom_mode = "AUTO.LAND";
+                if( set_mode_client_.call(set_mode_) && set_mode_.response.mode_sent)
+                {
+                    std::cout << "[ INFO] AUTO.LAND \n";
+                    break;
+                }
 
                 ros::spinOnce();
                 rate.sleep();

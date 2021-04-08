@@ -649,6 +649,7 @@ bool OffboardControl::check_orientation(float error, geometry_msgs::PoseStamped 
 
 void OffboardControl::input_local_target()
 {
+    double x[100], y[100], z[100];
 	std::cout << "[ INFO] Input Local position(s)" << std::endl;
 	std::cout << "Number of target(s): "; std::cin >> target_num_;
 	if(!in_x_pos_.empty() || !in_y_pos_.empty() || !in_z_pos_.empty())
@@ -660,29 +661,16 @@ void OffboardControl::input_local_target()
 	for (int i = 0; i < target_num_; i++)
 	{
 		std::cout << "Target (" << i+1 << ") position (in meter):" <<std::endl; 
-		std::cout << "x (" << i+1 << "): "; std::cin >> in_x_pos_[i];
-		std::cout << "y (" << i+1 << "): "; std::cin >> in_y_pos_[i];
-		std::cout << "z (" << i+1 << "): "; std::cin >> in_z_pos_[i];
+		std::cout << "x (" << i+1 << "): "; std::cin >> x[i]; in_x_pos_.push_back(x[i]);
+		std::cout << "y (" << i+1 << "): "; std::cin >> y[i]; in_y_pos_.push_back(y[i]);
+		std::cout << "z (" << i+1 << "): "; std::cin >> z[i]; in_z_pos_.push_back(z[i]);
 	}
-	int count = 0;
-	while (check_error_ < 0 || check_error_ > 1) 
-	{
-		std::cout << "Check offset value (0 < and < 1m): "; std::cin >> check_error_;
-		if (check_error_ < 0 || check_error_ > 1) 
-		{
-			count ++;
-		}
-		if (count = 5)
-		{
-			break;
-		}
-	}
-	std::cout << "That error is out of range, set to 0.1 m" << std::endl;
-	check_error_ = 0.1;
+	std::cout << "Check offset value (0 < and < 1m): "; std::cin >> check_error_;
 }
 
 void OffboardControl::input_global_target()
 {
+    double lat[100], lon[100], alt[100];
 	std::cout << "[ INFO] Input GPS position(s)" << std::endl;
 	std::cout << "Number of goal(s): "; std::cin >> goal_num_;
 	if(!in_latitude_.empty() || !in_longitude_.empty() || !in_altitude_.empty())
@@ -694,26 +682,12 @@ void OffboardControl::input_global_target()
 	for (int i = 0; i < goal_num_; i++)
 	{
 		std::cout << "Goal ("<< i+1 <<") position:" << std::endl;
-		std::cout << "Latitude " << i+1 << " (in degree): "; std::cin >> in_latitude_[i];
-		std::cout << "Longitude " << i+1 << " (in degree): "; std::cin >> in_longitude_[i];
-		std::cout << "Altitude " << i+1 << "  (in meter): "; std::cin >> in_altitude_[i];
-        in_altitude_[i] += global_position_.altitude;
+		std::cout << "Latitude " << i+1 << " (in degree): "; std::cin >> lat[i]; in_latitude_.push_back(lat[i]);
+		std::cout << "Longitude " << i+1 << " (in degree): "; std::cin >> lon[i]; in_longitude_.push_back(lon[i]);
+		std::cout << "Altitude " << i+1 << "  (in meter): "; std::cin >> alt[i]; 
+        alt[i] += global_position_.altitude; in_altitude_.push_back(alt[i]);
 	}
-	int count = 0;
-	while (check_error_ < 0 || check_error_ > 1) 
-	{
-		std::cout << "Check offset value (0 < and < 1m): "; std::cin >> check_error_;
-		if (check_error_ < 0 || check_error_ > 1) 
-		{
-			count ++;
-		}
-		if (count = 5)
-		{
-			break;
-		}
-	}
-	std::cout << "That error is out of range, set to 0.3 m" << std::endl;
-	check_error_ = 0.3;
+	std::cout << "Check offset value (0 < and < 1m): "; std::cin >> check_error_;
 }
 
 void OffboardControl::input_target()

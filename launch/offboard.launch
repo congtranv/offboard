@@ -1,0 +1,5 @@
+<launch>
+    <!-- <arg name="bag_name" default="offboard"></arg> -->
+    <node name="offboard" pkg="offboard" type="offboard" output="screen"></node>
+    <!-- <node name="record" pkg="rosbag" type="record" args="record -aO $(arg bag_name).bag"/> -->
+</launch>

@@ -1,4 +1,4 @@
-#include <offboard/offboard.h>
+#include "offboard/offboard.h"
 
 OffboardControl::OffboardControl()
 {
@@ -22,6 +22,11 @@ void gpsPosition_cb(const mavros_msgs::GPSRAW::ConstPtr& msg)
 {
     gps_position_ = *msg;
     gps_position_received = true;
+}
+
+void trigger_cb(const std_msgs::Bool::ConstPtr& msg)
+{
+    human_trigger_ = *msg;
 }
 
 void OffboardControl::takeOff(ros::Rate rate)
@@ -73,6 +78,13 @@ void OffboardControl::landing(geometry_msgs::PoseStamped setpoint, ros::Rate rat
     std::cout << "\n[ INFO] ----- Descending \n";
     while (ros::ok() && !check_land)
     {
+        if (human_trigger_.data)
+        {
+            std::cout << "\n[ FATAL] !----- HUMAN DETECTED -----!\n";
+            setpoint.header.stamp = ros::Time::now();
+            local_pos_pub_.publish(setpoint);
+        }
+        else{
         std::vector<double> v_land_ = vel_limit(current_pose_, targetTransfer(setpoint.pose.position.x, setpoint.pose.position.y, 0));
 
         target_pose_.pose.position.x = current_pose_.pose.position.x + v_land_[0];
@@ -83,7 +95,7 @@ void OffboardControl::landing(geometry_msgs::PoseStamped setpoint, ros::Rate rat
         local_pos_pub_.publish(target_pose_);
             
         std::printf("----- Descending - %.3f (m)\n", current_pose_.pose.position.z);
-          
+        }
         check_land = check_position(check_error_, current_pose_, targetTransfer(setpoint.pose.position.x, setpoint.pose.position.y, 0));
         if (check_land && !final_check_)
         {
@@ -133,14 +145,16 @@ void OffboardControl::landing(geometry_msgs::PoseStamped setpoint, ros::Rate rat
 void OffboardControl::position_control(ros::NodeHandle nh, ros::Rate rate)
 {
     nh_ = nh;
-	state_sub_ = nh_.subscribe<mavros_msgs::State>("mavros/state", 10, state_cb);
-	local_pose_sub_ = nh_.subscribe<geometry_msgs::PoseStamped>("mavros/local_position/pose", 10, localPose_cb);
-	global_pos_sub_ = nh_.subscribe<sensor_msgs::NavSatFix>("mavros/global_position/global", 10, globalPosition_cb);
-	gps_pos_sub_ = nh_.subscribe<mavros_msgs::GPSRAW>("mavros/gpsstatus/gps1/raw", 10, gpsPosition_cb);
+	state_sub_ = nh_.subscribe<mavros_msgs::State>("/mavros/state", 10, state_cb);
+	local_pose_sub_ = nh_.subscribe<geometry_msgs::PoseStamped>("/mavros/local_position/pose", 10, localPose_cb);
+	global_pos_sub_ = nh_.subscribe<sensor_msgs::NavSatFix>("/mavros/global_position/global", 10, globalPosition_cb);
+	gps_pos_sub_ = nh_.subscribe<mavros_msgs::GPSRAW>("/mavros/gpsstatus/gps1/raw", 10, gpsPosition_cb);
 
-	local_pos_pub_ = nh_.advertise<geometry_msgs::PoseStamped>("mavros/setpoint_position/local", 10);
+    trigger_sub_ = nh_.subscribe<std_msgs::Bool>("/human_trigger", 10, trigger_cb);
 
-	set_mode_client_ = nh_.serviceClient<mavros_msgs::SetMode>("mavros/set_mode");
+	local_pos_pub_ = nh_.advertise<geometry_msgs::PoseStamped>("/mavros/setpoint_position/local", 10);
+
+	set_mode_client_ = nh_.serviceClient<mavros_msgs::SetMode>("/mavros/set_mode");
 	arming_client_ = nh_.serviceClient<mavros_msgs::CommandBool>("/mavros/cmd/arming");
     
     // wait for FCU connection

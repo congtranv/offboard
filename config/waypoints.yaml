@@ -17,4 +17,4 @@ altitude: [5, 6, 7] # m
 goal_error: 0.3 # m
 
 v_desired: 0.5 # m/s
-human_trigger: false
+human_trig: false

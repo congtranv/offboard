@@ -57,9 +57,21 @@
 #### 2.1 CONNECT TO PIXHAWK
 ##### 2.1.1 Practice on jetson
 - **connect jetson to pixhawk** (*replace fcu_url with your own config*)
+  ***
+  before run offboard with landing at each setpoint, use [QGround Control](https://github.com/congtranv/px4-param/blob/main/QGroundControl.AppImage) to set `COM_DISARM_LAND` to `-1`*(disable)* for disable auto disarm when land of pixhawk.
+
+  when practice done, set `COM_DISARM_LAND` to `2` for enable auto disarm after land 2 seconds.
+  ***
+  connect:
 
   ```
   roslaunch mavros px4.launch fcu_url:=/dev/ttyTHS1:921600
+  ```
+##### 2.1.2 run simulation
+- **run px4 simulation with mavros connected**
+
+  ```
+  roslaunch px4 mavros_posix_sitl.launch
   ```
   ***
   in this terminal, run  `param set COM_DISARM_LAND -1`  to disable auto disarm when land of pixhawk:
@@ -71,12 +83,6 @@
   pxh> param set COM_DISARM_LAND 2
   ```
   ***
-##### 2.1.2 run simulation
-- **run px4 simulation with mavros connected**
-
-  ```
-  roslaunch px4 mavros_posix_sitl.launch
-  ```
 #### 2.2 run *offboard_node*: 
 
   ```

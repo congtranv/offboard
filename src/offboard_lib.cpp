@@ -84,7 +84,8 @@ void OffboardControl::landing(geometry_msgs::PoseStamped setpoint, ros::Rate rat
             setpoint.header.stamp = ros::Time::now();
             local_pos_pub_.publish(setpoint);
         }
-        else{
+        else
+        {
         std::vector<double> v_land_ = vel_limit(current_pose_, targetTransfer(setpoint.pose.position.x, setpoint.pose.position.y, 0));
 
         target_pose_.pose.position.x = current_pose_.pose.position.x + v_land_[0];
@@ -126,7 +127,8 @@ void OffboardControl::landing(geometry_msgs::PoseStamped setpoint, ros::Rate rat
                 rate.sleep();
             }
         }
-        else if (check_land && final_check_)
+        // else if (check_land && final_check_)
+        if (check_land && final_check_)
         {
             set_mode_.request.custom_mode = "AUTO.LAND";
             if( set_mode_client_.call(set_mode_) && set_mode_.response.mode_sent)
@@ -134,25 +136,27 @@ void OffboardControl::landing(geometry_msgs::PoseStamped setpoint, ros::Rate rat
                 std::printf("[ INFO] --------------- LAND ---------------\n");
             }
         }
-        else
-        {
-            ros::spinOnce();
-            rate.sleep();
-        }
+        // else
+        // {
+        //     ros::spinOnce();
+        //     rate.sleep();
+        // }
+        ros::spinOnce();
+        rate.sleep();
     }
 }
 
 void OffboardControl::position_control(ros::NodeHandle nh, ros::Rate rate)
 {
     nh_ = nh;
-	state_sub_ = nh_.subscribe<mavros_msgs::State>("/mavros/state", 10, state_cb);
-	local_pose_sub_ = nh_.subscribe<geometry_msgs::PoseStamped>("/mavros/local_position/pose", 10, localPose_cb);
-	global_pos_sub_ = nh_.subscribe<sensor_msgs::NavSatFix>("/mavros/global_position/global", 10, globalPosition_cb);
-	gps_pos_sub_ = nh_.subscribe<mavros_msgs::GPSRAW>("/mavros/gpsstatus/gps1/raw", 10, gpsPosition_cb);
+	state_sub_ = nh_.subscribe<mavros_msgs::State>("/mavros/state", 50, state_cb);
+	local_pose_sub_ = nh_.subscribe<geometry_msgs::PoseStamped>("/mavros/local_position/pose", 50, localPose_cb);
+	global_pos_sub_ = nh_.subscribe<sensor_msgs::NavSatFix>("/mavros/global_position/global", 50, globalPosition_cb);
+	gps_pos_sub_ = nh_.subscribe<mavros_msgs::GPSRAW>("/mavros/gpsstatus/gps1/raw", 50, gpsPosition_cb);
 
-    trigger_sub_ = nh_.subscribe<std_msgs::Bool>("/human_trigger", 10, trigger_cb);
+    trigger_sub_ = nh_.subscribe<std_msgs::Bool>("/human_trigger", 50, trigger_cb);
 
-	local_pos_pub_ = nh_.advertise<geometry_msgs::PoseStamped>("/mavros/setpoint_position/local", 10);
+	local_pos_pub_ = nh_.advertise<geometry_msgs::PoseStamped>("/mavros/setpoint_position/local", 100);
 
 	set_mode_client_ = nh_.serviceClient<mavros_msgs::SetMode>("/mavros/set_mode");
 	arming_client_ = nh_.serviceClient<mavros_msgs::CommandBool>("/mavros/cmd/arming");
@@ -204,7 +208,10 @@ void OffboardControl::position_control(ros::NodeHandle nh, ros::Rate rate)
         y_offset_ = y_offset_ + y_off_[i]/100;
         z_offset_ = z_offset_ + z_off_[i]/100;
     }
-
+    std::printf("\n[ INFO] Current local position: [%.3f, %.3f, %.3f]\n", 
+                current_pose_.pose.position.x, current_pose_.pose.position.y, current_pose_.pose.position.z);
+    std::printf("[ INFO] Current GPS position: [%.8f, %.8f, %.3f]\n", 
+                        global_position_.latitude, global_position_.longitude, global_position_.altitude);
 	input_target();
 
     if (local_input_ == true) // local setpoint
@@ -243,49 +250,45 @@ void OffboardControl::position_control(ros::NodeHandle nh, ros::Rate rate)
     takeOff(rate);
 
 	int i = 0;
-	if (local_input_)
-	{
-		while (ros::ok())
-        {
+	// if (local_input_)
+	// {
+    while (ros::ok())
+    {
+		// while (ros::ok())
+        // {
+        if (local_input_)
+	    {
             if (i < (target_num_ -1))
             {
                 final_check_ = false;
                 vel_ = vel_limit(current_pose_, targetTransfer(in_x_pos_[i], in_y_pos_[i], in_z_pos_[i]));
-                target_pose_.pose.position.x = current_pose_.pose.position.x + vel_[0];
-                target_pose_.pose.position.y = current_pose_.pose.position.y + vel_[1];
-                target_pose_.pose.position.z = current_pose_.pose.position.z + vel_[2];
-
-                target_pose_.header.stamp = ros::Time::now();
-                local_pos_pub_.publish(target_pose_);
             }
             else
             {
                 final_check_ = true;
                 vel_ = vel_limit(current_pose_, targetTransfer(in_x_pos_[target_num_ - 1], in_y_pos_[target_num_ - 1], in_z_pos_[target_num_ - 1]));
-                target_pose_.pose.position.x = current_pose_.pose.position.x + vel_[0];
-                target_pose_.pose.position.y = current_pose_.pose.position.y + vel_[1];
-                target_pose_.pose.position.z = current_pose_.pose.position.z + vel_[2];
-
-                target_pose_.header.stamp = ros::Time::now();
-                local_pos_pub_.publish(target_pose_);
             }
+
+            target_pose_.pose.position.x = current_pose_.pose.position.x + vel_[0];
+            target_pose_.pose.position.y = current_pose_.pose.position.y + vel_[1];
+            target_pose_.pose.position.z = current_pose_.pose.position.z + vel_[2];
+
+            target_pose_.header.stamp = ros::Time::now();
+            local_pos_pub_.publish(target_pose_);
+
             std::printf("\nCurrent local position: [%.3f, %.3f, %.3f]\n", 
-                         current_pose_.pose.position.x, 
-                         current_pose_.pose.position.y, 
-                         current_pose_.pose.position.z);
-            std::printf("Target local position: [%.3f, %.3f, %.3f]\n", 
-                        in_x_pos_[i], in_y_pos_[i], in_z_pos_[i]);
+                        current_pose_.pose.position.x, current_pose_.pose.position.y, current_pose_.pose.position.z);
+            std::printf("Target local position: [%.3f, %.3f, %.3f]\n", in_x_pos_[i], in_y_pos_[i], in_z_pos_[i]);
+            
             distance_ = distanceLocal(current_pose_, targetTransfer(in_x_pos_[i], in_y_pos_[i], in_z_pos_[i]));
             std::printf("Distance to target: %.3f (m) \n", distance_);
 
             bool check = check_position(check_error_, current_pose_, targetTransfer(in_x_pos_[i], in_y_pos_[i], in_z_pos_[i]));
-            std::cout << "\n" << check << std::endl;
+            std::cout << check << "\n" << std::endl;
             if(check && !final_check_)
             {
-                std::printf("[ INFO] Reached position: [%.3f, %.3f, %.3f]\n", 
-                                current_pose_.pose.position.x, 
-                                current_pose_.pose.position.y, 
-                                current_pose_.pose.position.z);   
+                std::printf("\n[ INFO] Reached position: [%.3f, %.3f, %.3f]\n", 
+                            current_pose_.pose.position.x, current_pose_.pose.position.y, current_pose_.pose.position.z);   
                 std::printf("[ INFO] Target position: [%.3f, %.3f, %.3f]\n", in_x_pos_[i], in_y_pos_[i], in_z_pos_[i]);
                 std::printf("[ INFO] Next target: [%.3f, %.3f, %.3f]\n", in_x_pos_[i+1], in_y_pos_[i+1], in_z_pos_[i+1]);
                 
@@ -294,34 +297,35 @@ void OffboardControl::position_control(ros::NodeHandle nh, ros::Rate rate)
                 landing(targetTransfer(in_x_pos_[i], in_y_pos_[i], in_z_pos_[i]), rate);
 
                 i = i + 1;
-                ros::spinOnce();
-    		    rate.sleep();
+                // ros::spinOnce();
+    		    // rate.sleep();
     		}
-            else if (check && final_check_)
+            // else if (check && final_check_)
+            if (check && final_check_)
             {
                 std::printf("[ INFO] Reached FINAL position: [%.3f, %.3f, %.3f]\n", 
-                                current_pose_.pose.position.x, 
-                                current_pose_.pose.position.y, 
-                                current_pose_.pose.position.z);
+                            current_pose_.pose.position.x, current_pose_.pose.position.y, current_pose_.pose.position.z);
 
                 std::cout << "\n[ INFO] ----- Hovering - Ready to LAND\n";
                 hover(targetTransfer(in_x_pos_[target_num_ - 1], in_y_pos_[target_num_ - 1], in_z_pos_[target_num_ - 1]), rate);
                 landing(targetTransfer(in_x_pos_[target_num_ - 1], in_y_pos_[target_num_ - 1], in_z_pos_[target_num_ - 1]), rate);
                 break;
                 
-                ros::spinOnce();
-    		    rate.sleep();
+                // ros::spinOnce();
+    		    // rate.sleep();
             }
-    		else 
-    		{
-    			ros::spinOnce();
-    		    rate.sleep();
-    		} 
+    		// else 
+    		// {
+    		// 	ros::spinOnce();
+    		//     rate.sleep();
+    		// } 
         }
-	}
-	else // global setpoints
-    {
-        while (ros::ok())
+	// }
+	// else // global setpoints
+    // {
+        // while (ros::ok())
+        // {
+        else // global setpoints
         {
             if (i < (goal_num_ - 1))
             {
@@ -342,71 +346,65 @@ void OffboardControl::position_control(ros::NodeHandle nh, ros::Rate rate)
             local_pos_pub_.publish(target_pose_);
 
             std::printf("\nCurrent GPS position: [%.8f, %.8f, %.3f]\n", 
-                        global_position_.latitude, 
-                        global_position_.longitude, 
-                        global_position_.altitude);
+                        global_position_.latitude, global_position_.longitude, global_position_.altitude);
             std::printf("Goal GPS position: [%.8f, %.8f, %.3f]\n", 
                         in_latitude_[i], in_longitude_[i], in_altitude_[i]);
            
             std::printf("\nCurrent local position: [%.3f, %.3f, %.3f]\n", 
-                         current_pose_.pose.position.x, 
-                         current_pose_.pose.position.y, 
-                         current_pose_.pose.position.z);
+                         current_pose_.pose.position.x, current_pose_.pose.position.y, current_pose_.pose.position.z);
             std::printf("Target local position: [%.3f, %.3f, %.3f]\n", 
-                            targetTransfer(enu_g_.x + x_offset_, enu_g_.y + y_offset_, enu_g_.z + z_offset_).pose.position.x, 
-                            targetTransfer(enu_g_.x + x_offset_, enu_g_.y + y_offset_, enu_g_.z + z_offset_).pose.position.y,
-                            targetTransfer(enu_g_.x + x_offset_, enu_g_.y + y_offset_, enu_g_.z + z_offset_).pose.position.z);
+                        targetTransfer(enu_g_.x + x_offset_, enu_g_.y + y_offset_, enu_g_.z + z_offset_).pose.position.x, 
+                        targetTransfer(enu_g_.x + x_offset_, enu_g_.y + y_offset_, enu_g_.z + z_offset_).pose.position.y,
+                        targetTransfer(enu_g_.x + x_offset_, enu_g_.y + y_offset_, enu_g_.z + z_offset_).pose.position.z);
+
             distance_ = distanceLocal(current_pose_, targetTransfer(enu_g_.x + x_offset_, enu_g_.y + y_offset_, enu_g_.z + z_offset_));
             std::printf("Distance to target: %.3f (m) \n", distance_);
 
             bool check = check_position(check_error_, current_pose_, targetTransfer(enu_g_.x + x_offset_, enu_g_.y + y_offset_, enu_g_.z + z_offset_));
-            std::cout << "\n" << check << std::endl;
+            std::cout << check << "\n" << std::endl;
             if (check && !final_check_)
             {
-                std::printf("[ INFO] Reached position: [%.8f, %.8f, %.3f]\n", 
-                                global_position_.latitude, 
-                                global_position_.longitude, 
-                                global_position_.altitude);
+                std::printf("\n[ INFO] Reached position: [%.8f, %.8f, %.3f]\n", 
+                            global_position_.latitude, global_position_.longitude, global_position_.altitude);
                 std::printf("[ INFO] Goal GPS: [%.8f, %.8f, %.3f]\n", in_latitude_[i], in_latitude_[i], in_altitude_[i]);
-                std::printf("[ INFO] Converted position: [%.3f, %.3f, %.3f]\n", 
-                                current_pose_.pose.position.x, 
-                                current_pose_.pose.position.y, 
-                                current_pose_.pose.position.z);   
+                std::printf("[ INFO] Next goal: [%.8f, %.8f, %.3f]\n", in_latitude_[i+1], in_latitude_[i+1], in_altitude_[i+1]);
+                std::printf("\n[ INFO] Local position: [%.3f, %.3f, %.3f]\n", 
+                            current_pose_.pose.position.x, current_pose_.pose.position.y, current_pose_.pose.position.z);   
                 std::printf("[ INFO] Converted target: [%.3f, %.3f, %.3f]\n", 
                             targetTransfer(enu_g_.x + x_offset_, enu_g_.y + y_offset_, enu_g_.z + z_offset_).pose.position.x, 
                             targetTransfer(enu_g_.x + x_offset_, enu_g_.y + y_offset_, enu_g_.z + z_offset_).pose.position.y,
                             targetTransfer(enu_g_.x + x_offset_, enu_g_.y + y_offset_, enu_g_.z + z_offset_).pose.position.z);
-                std::printf("[ INFO] Next goal: [%.8f, %.8f, %.3f]\n", in_latitude_[i+1], in_latitude_[i+1], in_altitude_[i+1]);
                 
                 std::cout << "\n[ INFO] ----- Hovering \n";
                 hover(targetTransfer(enu_g_.x + x_offset_, enu_g_.y + y_offset_, enu_g_.z + z_offset_), rate);
                 landing(targetTransfer(enu_g_.x + x_offset_, enu_g_.y + y_offset_, enu_g_.z + z_offset_), rate);
 
                 i = i + 1;
-                ros::spinOnce();
-                rate.sleep();
+                // ros::spinOnce();
+                // rate.sleep();
             }
-            else if (check && final_check_)
+            // else if (check && final_check_)
+            if (check && final_check_)
             {
                 std::printf("[ INFO] Reached FINAL position: [%.8f, %.8f, %.3f]\n", 
-                                global_position_.latitude, 
-                                global_position_.longitude, 
-                                global_position_.altitude);
+                            global_position_.latitude, global_position_.longitude, global_position_.altitude);
                 
                 std::cout << "\n[ INFO] ----- Hovering - Ready to LAND\n";
                 hover(targetTransfer(enu_g_.x + x_offset_, enu_g_.y + y_offset_, enu_g_.z + z_offset_), rate);
                 landing(targetTransfer(enu_g_.x + x_offset_, enu_g_.y + y_offset_, enu_g_.z + z_offset_), rate);
                 break;
                 
-                ros::spinOnce();
-                rate.sleep();
+                // ros::spinOnce();
+                // rate.sleep();
             }
-            else 
-            {
-                ros::spinOnce();
-                rate.sleep();
-            } 
+            // else 
+            // {
+            //     ros::spinOnce();
+            //     rate.sleep();
+            // } 
         }
+        ros::spinOnce();
+    	rate.sleep();
     }
 }
 

@@ -1,233 +1,136 @@
-#include <ros/ros.h>
-#include <geometry_msgs/PoseStamped.h>
-#include <geographic_msgs/GeoPoseStamped.h>
-#include <mavros_msgs/State.h>
-#include <tf/tf.h>
-#include <tf/transform_datatypes.h>
+#ifndef OFFBOARD_H
+#define OFFBOARD_H
 
+#include <ros/ros.h>
+#include <mavros_msgs/State.h>
 #include <mavros_msgs/CommandBool.h>
 #include <mavros_msgs/SetMode.h>
-#include <mavros_msgs/GlobalPositionTarget.h>
+#include <std_msgs/Bool.h>
+/******* local position *******/
+#include <geometry_msgs/PoseStamped.h>
+/******* global position *******/
 #include <sensor_msgs/NavSatFix.h>
+#include <geographic_msgs/GeoPoseStamped.h>
 #include <mavros_msgs/GPSRAW.h>
-
-#include <sensor_msgs/BatteryState.h>
-
+/******* tranformation *******/
+#include <tf/tf.h>
+#include <tf/transform_datatypes.h>
+/******* C++ ******/
 #include <iostream>
 #include <cmath>
 #include <cstdio>
+#include <vector>
 
-/****** DEFINE CONSTANTS ******/
-const double PI  =3.141592653589793238463;
-const double eR  =6378.137; //km
+const double PI = 3.141592653589793238463;
+const double eR = 6378.137;         // earth radius in km
 
-/****** DEFINE FUNCTIONS ******/
-bool check_position(void);
-bool check_orientation(void);
+const double a = 6378137.0;         // WGS-84 Earth semimajor axis (m)
+const double b = 6356752.314245;    // Derived Earth semiminor axis (m)
+const double f = (a - b) / a;       // Ellipsoid Flatness
+const double f_inv = 1.0 / f;       // Inverse flattening
 
-void input_local_target(void);
-void input_global_target(void);
+const double a_sq = a * a;
+const double b_sq = b * b;
+const double e_sq = f * (2 - f);    // Square of Eccentricity
 
-double degree(double);
-double radian(double);
+bool global_position_received = false; // check receive global position
+bool gps_position_received = false; // check receive GPS raw position
 
-double measureGPS(double, double, double, double);
+mavros_msgs::State current_state_; // check connection to pixhawk
+mavros_msgs::GPSRAW gps_position_; // gps raw position from pixhawk
+geometry_msgs::PoseStamped current_pose_; // current local position
+sensor_msgs::NavSatFix global_position_; // global position
 
-/****** DECLARE VARIANTS ******/
-mavros_msgs::State current_state;
-geometry_msgs::PoseStamped current_pose;
-geometry_msgs::PoseStamped target_pose;
+std_msgs::Bool human_trigger_; // trigger when detected human
 
-bool global_position_received = false;
-bool gps_position_received = false;
+sensor_msgs::NavSatFix goalTransfer(double lat, double lon, double alt); // transfer lat, lon, alt setpoint to same message type with global_position
+geometry_msgs::PoseStamped targetTransfer(double x, double y, double z); // transfer x, y, z setpoint to same message type with local_position
 
-sensor_msgs::NavSatFix global_position;
-geographic_msgs::GeoPoseStamped goal_position;
-mavros_msgs::GPSRAW gps_position;
+inline void state_cb(const mavros_msgs::State::ConstPtr& msg);
+inline void localPose_cb(const geometry_msgs::PoseStamped::ConstPtr& msg);
+inline void globalPosition_cb(const sensor_msgs::NavSatFix::ConstPtr& msg);
+inline void gpsPosition_cb(const mavros_msgs::GPSRAW::ConstPtr& msg); 
 
-sensor_msgs::BatteryState current_batt;
+inline void trigger_cb(const std_msgs::Bool::ConstPtr& msg);
 
-tf::Quaternion q;
-
-int target_num;
-float target_pos[10][7];
-double roll, pitch, yaw;
-double r, p, y;
-
-double latitude, longitude, altitude, distance;
-float batt_percent;
-
-/****** FUNCTIONS ******/
-
-/***** callback functions *****/
-// state callback 
-void state_cb(const mavros_msgs::State::ConstPtr& msg)
+class OffboardControl
 {
-    current_state = *msg;
-}
+private:
+    ros::NodeHandle nh_;
 
-// local pose callback
-void pose_cb(const geometry_msgs::PoseStamped::ConstPtr& msg)
-{
-    current_pose = *msg;
-}
+    ros::Subscriber state_sub_;
+    ros::Subscriber local_pose_sub_;
+    ros::Subscriber global_pos_sub_;
+    ros::Subscriber gps_pos_sub_;
 
-// global position callback
-void globalPosition_cb(const sensor_msgs::NavSatFix::ConstPtr& msg) 
-{
-    global_position = *msg;
-    global_position_received = true;
-}
+    ros::Subscriber trigger_sub_;
 
-// gps position callback
-void gpsPosition_cb(const mavros_msgs::GPSRAW::ConstPtr& msg) 
-{
-    gps_position = *msg;
-	gps_position_received = true;
-}
+    ros::Publisher local_pos_pub_;
 
-// battery status callback
-void battery_cb(const sensor_msgs::BatteryState::ConstPtr& msg) 
-{
-    current_batt = *msg;
-}
+    ros::ServiceClient set_mode_client_;
+    ros::ServiceClient arming_client_;
 
-/****************************************************************************************************/
-/***** check_position: check when drone reached the target positions. return the true or false ******/
-/****************************************************************************************************/
-bool check_position()
-{
-	bool reached;
-	if(((target_pose.pose.position.x - 0.1) < current_pose.pose.position.x)
-	&& (current_pose.pose.position.x < (target_pose.pose.position.x + 0.1)) 
-	&& ((target_pose.pose.position.y - 0.1) < current_pose.pose.position.y)
-	&& (current_pose.pose.position.y < (target_pose.pose.position.y + 0.1))
-	&& ((target_pose.pose.position.z - 0.1) < current_pose.pose.position.z)
-	&& (current_pose.pose.position.z < (target_pose.pose.position.z + 0.1)))
-	{
-		reached = 1;
-	}
-	else
-	{
-		reached = 0;
-	}
-	return reached;
-}
+    float t_hover_; // time set to drone when hovering
+    double gps_lat, gps_lon, gps_alt; // gps latitude, longitude, altitude
+    float local_error_, global_error_; // offset for checking when drone go to near setpoints for local and global 
+    float check_error_; // offset for checking when drone go to near setpoints in main program
+    double distance_; // calculate the distance from current position to setpoint
+    double x_off_[100], y_off_[100], z_off_[100]; // store a series of offset between local position and ENU converted from global position
+    double x_offset_, y_offset_, z_offset_;
 
-/**********************************************************************************************************/
-/***** check_orientation: check when drone reached the target orientations. return the true or false ******/
-/**********************************************************************************************************/
-bool check_orientation()
-{
-	bool reached;
-	// tf Quaternion to RPY
-	tf::Quaternion qc(
-		current_pose.pose.orientation.x,
-		current_pose.pose.orientation.y,
-		current_pose.pose.orientation.z,
-		current_pose.pose.orientation.w);
-	tf::Matrix3x3 mc(qc);
-	double rc, pc, yc;
-	mc.getRPY(rc, pc, yc);
+    double vel_desired_; // desired velocity
+    std::vector<double> vel_;
 
-	tf::Quaternion qt(
-		current_pose.pose.orientation.x,
-		current_pose.pose.orientation.y,
-		current_pose.pose.orientation.z,
-		current_pose.pose.orientation.w);
-	tf::Matrix3x3 mt(qt);
-	double rt, pt, yt;
-	mt.getRPY(rt, pt, yt);
-	// check
-	if((((degree(rt)-1)<(degree(rc)))&&(degree(rc)<(degree(rt)+1)))
-	 &&(((degree(pt)-1)<(degree(pc)))&&(degree(pc)<(degree(pt)+1)))
-	 &&(((degree(yt)-1)<(degree(yc)))&&(degree(yc)<(degree(yt)+1)))) 
-	{
-		reached = 1;
-	}
-	else
-	{
-		reached = 0;
-	}
-	return reached;
-}
+    bool final_check_ = false; // true == reached final point || false == NOT final point
+    bool local_input_ = true; // true == input local || false == input global setpoints
+    // bool human_trigger_ = false; 
 
-/**************************************************************************/
-/***** input_local_target: input the number of waypoints and each point   *
- * coodinates (x, y, z). and input the yaw rotation at each waypoint ******/
-/**************************************************************************/
-void input_local_target()
-{
-	std::cout << "Input target(s) position:" << std::endl;
-	std::cout << "Number of target(s): "; std::cin >> target_num;
-	for (int i = 0; i < target_num; i++)
-	{
-		std::cout << "Target (" << i+1 << ") position (in meter):" <<std::endl; 
-		std::cout << "pos_x_" << i+1 << ":"; std::cin >> target_pos[i][0];
-		std::cout << "pos_y_" << i+1 << ":"; std::cin >> target_pos[i][1];
-		std::cout << "pos_z_" << i+1 << ":"; std::cin >> target_pos[i][2];
+    int target_num_; // number of local position setpoints
+    std::vector<double> in_x_pos_; // vector to store in x position
+    std::vector<double> in_y_pos_; // vector to store in y position
+    std::vector<double> in_z_pos_; // vector to store in z position
+    int goal_num_; // number of global position setpoints
+    std::vector<double> in_latitude_; // vector to store latitude
+    std::vector<double> in_longitude_; // vector to store longitude
+    std::vector<double> in_altitude_; // vector to store altitude
 
-		std::cout << "Target (" << i+1 << ") orientation (in degree):" <<std::endl; 
-		target_pos[i][3] = 0;
-		target_pos[i][4] = 0;
-		std::cout << "yaw_" << i+1 << ":"; std::cin >> target_pos[i][5];
-	}
-}
+    mavros_msgs::SetMode set_mode_; // set OFFBOARD mode in simulation
+    geometry_msgs::PoseStamped target_pose_; // target local setpoint
+    geographic_msgs::GeoPoseStamped goal_position_; // goal position 
+    geometry_msgs::Point enu_g_, enu_c_, enu_r_; // local ENU points: converted from GPS goal and current
+    geographic_msgs::GeoPoint wgs84_t_, wgs84_c_; // global WGS84 point: convert from ENU target and current
+    sensor_msgs::NavSatFix ref_; // reference point to convert ECEF to ENU and vice versa
+    geometry_msgs::Point offset_; // average offset in each axis
 
-/*************************************************************************************/
-/***** input_global_target: input the GPS [latitude, longitude, altitude] point ******/
-/*************************************************************************************/
-void input_global_target()
-{
-	std::cout << "Input GPS position" << std::endl;
-	std::cout << "Latitude  (degree):"; std::cin >> latitude;
-	std::cout << "Longitude (degree):"; std::cin >> longitude;
-	std::cout << "Altitude  (meter) :"; std::cin >> altitude;
-}
+    bool check_position(float error, geometry_msgs::PoseStamped current, geometry_msgs::PoseStamped target);
+    bool check_orientation(float error, geometry_msgs::PoseStamped current, geometry_msgs::PoseStamped target);
+    void input_target();
+    void input_local_target(); 
+    void input_global_target();
 
-/**********************************************************/
-/***** degree: convert angle from radian to degree ******/
-/**********************************************************/
-double degree(double rad)
-{
-	double radian_to_degree = (rad*180)/PI;
-	return radian_to_degree;
-}
+    inline double degree(double rad); 
+    inline double radian(double deg);
 
-/**********************************************************/
-/***** radian: convert angle from degree to radian ******/
-/**********************************************************/
-double radian(double deg)
-{
-	double degree_to_radian = (deg*PI)/180;
-	return degree_to_radian;
-}
+    double measureGPS(double lat1, double lon1, double alt1, double lat2, double lon2, double alt2);
+    double distanceLocal(geometry_msgs::PoseStamped current, geometry_msgs::PoseStamped target);
+    
+    geometry_msgs::Point WGS84ToECEF(sensor_msgs::NavSatFix wgs84);
+    geographic_msgs::GeoPoint ECEFToWGS84(geometry_msgs::Point ecef);
+    geometry_msgs::Point ECEFToENU(geometry_msgs::Point ecef, sensor_msgs::NavSatFix ref);
+    geometry_msgs::Point ENUToECEF(geometry_msgs::Point enu, sensor_msgs::NavSatFix ref);
+    geometry_msgs::Point WGS84ToENU(sensor_msgs::NavSatFix wgs84, sensor_msgs::NavSatFix ref);
+    geographic_msgs::GeoPoint ENUToWGS84(geometry_msgs::Point enu, sensor_msgs::NavSatFix ref);
 
-/*********************************************************************************************/
-/***** measureGPS: measure the distance between 2 GPS points that use haversine formula ******/
-/*********************************************************************************************/
-double measureGPS(double lat1, double lon1, double alt1, double lat2, double lon2, double alt2)
-{
-	double flat, plus, Distance;
-	lat1 = radian(lat1); lon1 = radian(lon1);
-	lat2 = radian(lat2); lon2 = radian(lon2);
-	flat = 2*eR*asin(sqrt(sin((lat2-lat1)/2)*sin((lat2-lat1)/2)+cos(lat1)*cos(lat2)*sin((lon2-lon1)/2)*sin((lon2-lon1)/2)))*1000; //m
-	if (alt1 == alt2)
-	{
-		Distance = flat;
-	}
-	else
-	{
-		if 	(alt1 > alt2)
-		{
-			plus = flat/((alt1/alt2)-1);
-			Distance = sqrt((flat+plus)*(flat+plus) + alt1*alt1) - sqrt(plus*plus + alt2*alt2);
-		}
-		else
-		{
-			plus = flat/((alt2/alt1)-1);
-			Distance = sqrt((flat+plus)*(flat+plus) + alt2*alt2) - sqrt(plus*plus + alt1*alt1);
-		}
-	}
-	return Distance;
-}
+public:
+    OffboardControl();
+  
+    void takeOff(ros::Rate rate);
+    void hover(geometry_msgs::PoseStamped target, ros::Rate rate);
+    void landing(geometry_msgs::PoseStamped setpoint, ros::Rate rate);
+    void position_control(ros::NodeHandle nh, ros::Rate rate);
+    std::vector<double> vel_limit(geometry_msgs::PoseStamped current, geometry_msgs::PoseStamped target);
+
+    ~OffboardControl();  
+};
+
+#endif

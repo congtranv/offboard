@@ -24,6 +24,17 @@ void gpsPosition_cb(const mavros_msgs::GPSRAW::ConstPtr& msg)
     gps_position_received = true;
 }
 
+void target_cb(const geometry_msgs::PoseStamped::ConstPtr& msg)
+{
+    target_pose_sub_ = *msg;
+    target_sub_received = ros::Time::now();
+}
+
+void error_cb(const std_msgs::Float64::ConstPtr& msg)
+{
+    error_sub_ = *msg;
+}
+
 void trigger_cb(const std_msgs::Bool::ConstPtr& msg)
 {
     human_trigger_ = *msg;
@@ -36,7 +47,8 @@ void OffboardControl::takeOff(ros::Rate rate)
     take_off_.pose.position.y = current_pose_.pose.position.y;
     system("rosparam load $HOME/ros/catkin_ws/src/offboard/config/waypoints.yaml");
     ros::param::get("z_takeoff", take_off_.pose.position.z);
-    std::cout << "[ INFO] ----- Takeoff \n";
+    ros::param::get("hover_time", t_hover_);
+    std::cout << "[ INFO] Takeoff \n";
     
     bool check_takeoff = false;
     while (ros::ok() && !check_takeoff)
@@ -47,8 +59,8 @@ void OffboardControl::takeOff(ros::Rate rate)
         check_takeoff = check_position(check_error_, current_pose_, take_off_);
         if (check_takeoff)
         {
-            std::cout << "[ INFO] ----- Hovering \n";
-            hover(take_off_, rate);
+            std::cout << "[ INFO] Hovering \n";
+            hover(t_hover_, take_off_, rate);
             std::cout << "[ INFO] --------------- FLY --------------- \n";
         }
         ros::spinOnce();
@@ -56,14 +68,12 @@ void OffboardControl::takeOff(ros::Rate rate)
     }
 }
 
-void OffboardControl::hover(geometry_msgs::PoseStamped target, ros::Rate rate)
+void OffboardControl::hover(double hover_time, geometry_msgs::PoseStamped target, ros::Rate rate)
 {
-    system("rosparam load $HOME/ros/catkin_ws/src/offboard/config/waypoints.yaml");
-	ros::param::get("hover_time", t_hover_);
     ros::Time t_check_;
     t_check_ = ros::Time::now();
 
-    while ((ros::Time::now() - t_check_) < ros::Duration(t_hover_))
+    while ((ros::Time::now() - t_check_) < ros::Duration(hover_time))
     {
         local_pos_pub_.publish(target);
 
@@ -75,7 +85,7 @@ void OffboardControl::hover(geometry_msgs::PoseStamped target, ros::Rate rate)
 void OffboardControl::landing(geometry_msgs::PoseStamped setpoint, ros::Rate rate)
 {
     bool check_land = false;
-    std::cout << "\n[ INFO] ----- Descending \n";
+    std::cout << "\n[ INFO] Descending \n";
     while (ros::ok() && !check_land)
     {
         if (human_trigger_.data)
@@ -86,29 +96,35 @@ void OffboardControl::landing(geometry_msgs::PoseStamped setpoint, ros::Rate rat
         }
         else
         {
-        std::vector<double> v_land_ = vel_limit(current_pose_, targetTransfer(setpoint.pose.position.x, setpoint.pose.position.y, 0));
+            system("rosparam load $HOME/ros/catkin_ws/src/offboard/config/waypoints.yaml");
+            ros::param::get("v_land", vel_desired_);   
+            std::vector<double> v_land_ = vel_limit(vel_desired_, current_pose_, targetTransfer(setpoint.pose.position.x, setpoint.pose.position.y, 0));
 
-        target_pose_.pose.position.x = current_pose_.pose.position.x + v_land_[0];
-        target_pose_.pose.position.y = current_pose_.pose.position.y + v_land_[1];
-        target_pose_.pose.position.z = current_pose_.pose.position.z + v_land_[2];
+            target_pose_.pose.position.x = current_pose_.pose.position.x + v_land_[0];
+            target_pose_.pose.position.y = current_pose_.pose.position.y + v_land_[1];
+            target_pose_.pose.position.z = current_pose_.pose.position.z + v_land_[2];
 
-        target_pose_.header.stamp = ros::Time::now();
-        local_pos_pub_.publish(target_pose_);
-            
-        std::printf("----- Descending - %.3f (m)\n", current_pose_.pose.position.z);
+            target_pose_.header.stamp = ros::Time::now();
+            local_pos_pub_.publish(target_pose_);
+                
+            std::printf("----- Descending - %.3f (m)\n", current_pose_.pose.position.z);
         }
+        system("rosparam load $HOME/ros/catkin_ws/src/offboard/config/waypoints.yaml");
+	    ros::param::get("hover_time", t_hover_);
         check_land = check_position(check_error_, current_pose_, targetTransfer(setpoint.pose.position.x, setpoint.pose.position.y, 0));
-        if (check_land && !final_check_)
+        if (check_land)
         {
-            std::cout << "[ INFO] ----- Unpacking \n";
-            hover(targetTransfer(setpoint.pose.position.x, setpoint.pose.position.y, 0), rate);
+            std::cout << "[ INFO] Unpacking \n";
+            hover(t_hover_, targetTransfer(setpoint.pose.position.x, setpoint.pose.position.y, 0), rate);
             std::cout << "[ INFO] Unpacked\n";
 
-            std::cout << "[ INFO] ----- Return setpoint\n";
+            std::cout << "[ INFO] Return setpoint\n";
             bool check_return = false;
             while (ros::ok() && !check_return)
             {
-                std::vector<double> v_return_ = vel_limit(current_pose_, setpoint); 
+                system("rosparam load $HOME/ros/catkin_ws/src/offboard/config/waypoints.yaml");
+                ros::param::get("v_land", vel_desired_);
+                std::vector<double> v_return_ = vel_limit(vel_desired_, current_pose_, setpoint); 
                 target_pose_.pose.position.x = current_pose_.pose.position.x + v_return_[0];
                 target_pose_.pose.position.y = current_pose_.pose.position.y + v_return_[1];
                 target_pose_.pose.position.z = current_pose_.pose.position.z + v_return_[2];
@@ -121,14 +137,46 @@ void OffboardControl::landing(geometry_msgs::PoseStamped setpoint, ros::Rate rat
                 if (check_return)
                 {
                     std::cout << "[ INFO] ----- Hovering \n";
-                    hover(setpoint, rate);
+                    hover(t_hover_, setpoint, rate);
                 }
                 ros::spinOnce();
                 rate.sleep();
             }
         }
-        // else if (check_land && final_check_)
-        if (check_land && final_check_)
+        ros::spinOnce();
+        rate.sleep();
+    }
+}
+
+void OffboardControl::landing_final(geometry_msgs::PoseStamped setpoint, ros::Rate rate)
+{
+    bool check_land = false;
+    std::cout << "\n[ INFO] Landing \n";
+    while (ros::ok() && !check_land)
+    {
+        if (human_trigger_.data)
+        {
+            std::cout << "\n[ FATAL] !----- HUMAN DETECTED -----!\n";
+            setpoint.header.stamp = ros::Time::now();
+            local_pos_pub_.publish(setpoint);
+        }
+        else
+        {
+            system("rosparam load $HOME/ros/catkin_ws/src/offboard/config/waypoints.yaml");
+            ros::param::get("v_land", vel_desired_);
+            std::vector<double> v_land_ = vel_limit(vel_desired_, current_pose_, targetTransfer(setpoint.pose.position.x, setpoint.pose.position.y, 0));
+
+            target_pose_.pose.position.x = current_pose_.pose.position.x + v_land_[0];
+            target_pose_.pose.position.y = current_pose_.pose.position.y + v_land_[1];
+            target_pose_.pose.position.z = current_pose_.pose.position.z + v_land_[2];
+
+            target_pose_.header.stamp = ros::Time::now();
+            local_pos_pub_.publish(target_pose_);
+                
+            std::printf("----- Descending - %.3f (m)\n", current_pose_.pose.position.z);
+        }
+        check_land = check_position(check_error_, current_pose_, targetTransfer(setpoint.pose.position.x, setpoint.pose.position.y, 0));
+        if (check_land)
         {
             set_mode_.request.custom_mode = "AUTO.LAND";
             if( set_mode_client_.call(set_mode_) && set_mode_.response.mode_sent)
@@ -136,14 +184,90 @@ void OffboardControl::landing(geometry_msgs::PoseStamped setpoint, ros::Rate rat
                 std::printf("[ INFO] --------------- LAND ---------------\n");
             }
         }
-        // else
-        // {
-        //     ros::spinOnce();
-        //     rate.sleep();
-        // }
         ros::spinOnce();
         rate.sleep();
     }
+}
+
+void OffboardControl::landing_marker(geometry_msgs::PoseStamped setpoint, ros::Rate rate)
+{
+    bool check_error = false;
+    bool check_setpoint = false;
+    geometry_msgs::PoseStamped marker_pose;
+    
+    ros::Time t_check_target = ros::Time::now();
+    while (ros::ok() && !check_error)
+    {
+        if (target_sub_received != ros::Time::now())
+        {
+            std::cout << "[ INFO] Finding target \n";
+            system("rosparam load $HOME/ros/catkin_ws/src/offboard/config/waypoints.yaml");
+            ros::param::get("stable_time", t_stable_);
+            hover(t_stable_, current_pose_, rate);
+            if ((ros::Time::now() - t_check_target) > ros::Duration(t_stable_ + 30))
+            {
+                std::cout << "[ WARN] NO TARGET - LAND\n";
+                landing_final(setpoint, rate);
+                break;
+            }
+        }
+        else
+        {
+            marker_pose = target_pose_sub_;
+            check_setpoint = false;
+            std::cout << "\n[ INFO] Received target\n";            
+            // std::printf("[ INFO] Setpoint: [%.3f, %.3f, %.3f]\n", marker_pose.pose.position.x, marker_pose.pose.position.y, marker_pose.pose.position.z);
+             
+            system("rosparam load $HOME/ros/catkin_ws/src/offboard/config/waypoints.yaml");
+            ros::param::get("stable_time", t_stable_);
+            
+            while (ros::ok() && !check_setpoint)
+            {  
+                std::printf("\n[ INFO] Setpoint: [%.3f, %.3f, %.3f]\n", marker_pose.pose.position.x, marker_pose.pose.position.y, marker_pose.pose.position.z);
+                check_error = (error_sub_.data < 0.2) ? true:false;
+                std::cout << "----- check error: " << error_sub_.data << "\n";
+                if (check_error)
+                {
+                    geometry_msgs::PoseStamped setpoint_land;
+                    setpoint_land = targetTransfer(marker_pose.pose.position.x, marker_pose.pose.position.y, setpoint.pose.position.z);
+                    std::printf("\n[ INFO] Checked error @ [%.3f, %.3f, %.3f]\n", current_pose_.pose.position.x, current_pose_.pose.position.y, current_pose_.pose.position.z);
+
+                    std::cout << "[ INFO] Hovering - ready to LAND\n";
+                    hover(t_stable_, targetTransfer(marker_pose.pose.position.x, marker_pose.pose.position.y, setpoint.pose.position.z), rate);
+                    landing_final(targetTransfer(marker_pose.pose.position.x, marker_pose.pose.position.y, setpoint.pose.position.z), rate);
+                    break;
+                }
+                else
+                {
+                    system("rosparam load $HOME/ros/catkin_ws/src/offboard/config/waypoints.yaml");
+                    ros::param::get("v_marker", vel_desired_);
+                    std::vector<double> v_setpoint_ = vel_limit(vel_desired_, current_pose_, targetTransfer(marker_pose.pose.position.x, marker_pose.pose.position.y, setpoint.pose.position.z));
+
+                    target_pose_.pose.position.x = current_pose_.pose.position.x + v_setpoint_[0];
+                    target_pose_.pose.position.y = current_pose_.pose.position.y + v_setpoint_[1];
+                    target_pose_.pose.position.z = current_pose_.pose.position.z + v_setpoint_[2];
+
+                    target_pose_.header.stamp = ros::Time::now();
+                    local_pos_pub_.publish(target_pose_);
+                        
+                    check_setpoint = check_position(check_error_, current_pose_, targetTransfer(marker_pose.pose.position.x, marker_pose.pose.position.y, setpoint.pose.position.z));
+                    t_check_target = ros::Time::now();
+                    if (check_setpoint)
+                    {
+                        std::printf("\n[ INFO] Checked setpoint, NOT check error\n");
+                        hover(t_stable_, current_pose_ , rate);
+                    }
+                    
+                }
+
+                ros::spinOnce();
+                rate.sleep();
+            }
+        }
+
+        ros::spinOnce();
+        rate.sleep();
+    }          
 }
 
 void OffboardControl::position_control(ros::NodeHandle nh, ros::Rate rate)
@@ -155,6 +279,8 @@ void OffboardControl::position_control(ros::NodeHandle nh, ros::Rate rate)
 	gps_pos_sub_ = nh_.subscribe<mavros_msgs::GPSRAW>("/mavros/gpsstatus/gps1/raw", 50, gpsPosition_cb);
 
     trigger_sub_ = nh_.subscribe<std_msgs::Bool>("/human_trigger", 50, trigger_cb);
+    target_sub_ = nh_.subscribe<geometry_msgs::PoseStamped>("/target_position", 100, target_cb);
+    marker_error_sub_ = nh_.subscribe<std_msgs::Float64>("/check_error_pos", 100, error_cb);
 
 	local_pos_pub_ = nh_.advertise<geometry_msgs::PoseStamped>("/mavros/setpoint_position/local", 100);
 
@@ -162,23 +288,22 @@ void OffboardControl::position_control(ros::NodeHandle nh, ros::Rate rate)
 	arming_client_ = nh_.serviceClient<mavros_msgs::CommandBool>("/mavros/cmd/arming");
     
     // wait for FCU connection
-    std::cout << "[ INFO] ----- Waiting for FCU connection \n";
+    std::cout << "\n[ INFO] Waiting for FCU connection \n";
     while(ros::ok() && !current_state_.connected)
 	{
         ros::spinOnce();
         rate.sleep();
     }
-    std::cout << "[ INFO] FCU connected \n";
+    std::cout << "\n[ INFO] FCU connected \n";
     // wait for GPS information
-    std::cout << "[ INFO] ----- Waiting for GPS signal \n";
+    std::cout << "[ INFO] Waiting for GPS signal \n";
     while (ros::ok() && !global_position_received && !gps_position_received) 
     {
         ros::spinOnce();
         rate.sleep();
     }
-    std::cout << "[ INFO] GPS position received \n";
-	std::cout << "[ INFO] ----- Waiting for stable initial \n";
-    
+    std::cout << "\n[ INFO] GPS position received \n";
+	std::cout << "[ INFO] Waiting for stable initial \n";
     ros::Time t_check_;
     t_check_ = ros::Time::now();
     while (ros::ok() && (ros::Time::now() - t_check_) < ros::Duration(20))
@@ -186,7 +311,7 @@ void OffboardControl::position_control(ros::NodeHandle nh, ros::Rate rate)
         ros::spinOnce();
         rate.sleep();
     }
-    std::cout << "[ INFO] Init stable done \n";
+    std::cout << "\n[ INFO] Init stable done \n";
 
 	// init reference point
     ref_.latitude = global_position_.latitude;
@@ -208,10 +333,8 @@ void OffboardControl::position_control(ros::NodeHandle nh, ros::Rate rate)
         y_offset_ = y_offset_ + y_off_[i]/100;
         z_offset_ = z_offset_ + z_off_[i]/100;
     }
-    std::printf("\n[ INFO] Current local position: [%.3f, %.3f, %.3f]\n", 
-                current_pose_.pose.position.x, current_pose_.pose.position.y, current_pose_.pose.position.z);
-    std::printf("[ INFO] Current GPS position: [%.8f, %.8f, %.3f]\n", 
-                        global_position_.latitude, global_position_.longitude, global_position_.altitude);
+    std::printf("\n[ INFO] Local position: [%.3f, %.3f, %.3f]\n", current_pose_.pose.position.x, current_pose_.pose.position.y, current_pose_.pose.position.z);
+    std::printf("[ INFO] GPS position: [%.8f, %.8f, %.3f]\n", global_position_.latitude, global_position_.longitude, global_position_.altitude);
 	input_target();
 
     if (local_input_ == true) // local setpoint
@@ -229,7 +352,7 @@ void OffboardControl::position_control(ros::NodeHandle nh, ros::Rate rate)
     }
 
     // send a few setpoints before starting
-    std::cout << "[ INFO] ----- Setting OFFBOARD stream \n";
+    std::cout << "[ INFO] Setting OFFBOARD stream \n";
     for(int i = 100; ros::ok() && i > 0; --i)
     {
         target_pose_.header.stamp = ros::Time::now();
@@ -237,36 +360,36 @@ void OffboardControl::position_control(ros::NodeHandle nh, ros::Rate rate)
         ros::spinOnce();
         rate.sleep();
     }
-    std::cout << "[ INFO] Set OFFBOARD stream done \n";
+    std::cout << "\n[ INFO] Set OFFBOARD stream done \n";
 
-    std::cout << "[ INFO] ----- Waiting OFFBOARD switch \n";
+    std::cout << "[ INFO] Waiting OFFBOARD switch \n";
     while (ros::ok() && !current_state_.armed && (current_state_.mode != "OFFBOARD"))
     {
         ros::spinOnce();
         rate.sleep();
     }
-    std::cout << "[ INFO] --------------- READY --------------- \n";
+    std::cout << "\n[ INFO] --------------- READY --------------- \n";
 
     takeOff(rate);
 
 	int i = 0;
-	// if (local_input_)
-	// {
     while (ros::ok())
     {
-		// while (ros::ok())
-        // {
         if (local_input_)
 	    {
             if (i < (target_num_ -1))
             {
                 final_check_ = false;
-                vel_ = vel_limit(current_pose_, targetTransfer(in_x_pos_[i], in_y_pos_[i], in_z_pos_[i]));
+                system("rosparam load $HOME/ros/catkin_ws/src/offboard/config/waypoints.yaml");
+                ros::param::get("v_desired", vel_desired_);
+                vel_ = vel_limit(vel_desired_, current_pose_, targetTransfer(in_x_pos_[i], in_y_pos_[i], in_z_pos_[i]));
             }
             else
             {
                 final_check_ = true;
-                vel_ = vel_limit(current_pose_, targetTransfer(in_x_pos_[target_num_ - 1], in_y_pos_[target_num_ - 1], in_z_pos_[target_num_ - 1]));
+                system("rosparam load $HOME/ros/catkin_ws/src/offboard/config/waypoints.yaml");
+                ros::param::get("v_desired", vel_desired_);
+                vel_ = vel_limit(vel_desired_, current_pose_, targetTransfer(in_x_pos_[target_num_ - 1], in_y_pos_[target_num_ - 1], in_z_pos_[target_num_ - 1]));
             }
 
             target_pose_.pose.position.x = current_pose_.pose.position.x + vel_[0];
@@ -292,39 +415,28 @@ void OffboardControl::position_control(ros::NodeHandle nh, ros::Rate rate)
                 std::printf("[ INFO] Target position: [%.3f, %.3f, %.3f]\n", in_x_pos_[i], in_y_pos_[i], in_z_pos_[i]);
                 std::printf("[ INFO] Next target: [%.3f, %.3f, %.3f]\n", in_x_pos_[i+1], in_y_pos_[i+1], in_z_pos_[i+1]);
                 
-                std::cout << "\n[ INFO] ----- Hovering \n";
-                hover(targetTransfer(in_x_pos_[i], in_y_pos_[i], in_z_pos_[i]), rate);
-                landing(targetTransfer(in_x_pos_[i], in_y_pos_[i], in_z_pos_[i]), rate);
+                std::cout << "\n[ INFO] Hovering \n";
+                system("rosparam load $HOME/ros/catkin_ws/src/offboard/config/waypoints.yaml");
+                ros::param::get("hover_time", t_hover_);
+                hover(t_hover_, targetTransfer(in_x_pos_[i], in_y_pos_[i], in_z_pos_[i]), rate);
+                // landing(targetTransfer(in_x_pos_[i], in_y_pos_[i], in_z_pos_[i]), rate);
 
                 i = i + 1;
-                // ros::spinOnce();
-    		    // rate.sleep();
     		}
-            // else if (check && final_check_)
             if (check && final_check_)
             {
                 std::printf("[ INFO] Reached FINAL position: [%.3f, %.3f, %.3f]\n", 
                             current_pose_.pose.position.x, current_pose_.pose.position.y, current_pose_.pose.position.z);
 
-                std::cout << "\n[ INFO] ----- Hovering - Ready to LAND\n";
-                hover(targetTransfer(in_x_pos_[target_num_ - 1], in_y_pos_[target_num_ - 1], in_z_pos_[target_num_ - 1]), rate);
-                landing(targetTransfer(in_x_pos_[target_num_ - 1], in_y_pos_[target_num_ - 1], in_z_pos_[target_num_ - 1]), rate);
+                std::cout << "\n[ INFO] Hovering\n";
+                system("rosparam load $HOME/ros/catkin_ws/src/offboard/config/waypoints.yaml");
+                ros::param::get("hover_time", t_hover_);
+                hover(t_hover_, targetTransfer(in_x_pos_[target_num_ - 1], in_y_pos_[target_num_ - 1], in_z_pos_[target_num_ - 1]), rate);
+                // landing_final(targetTransfer(in_x_pos_[target_num_ - 1], in_y_pos_[target_num_ - 1], in_z_pos_[target_num_ - 1]), rate);
+                landing_marker(targetTransfer(in_x_pos_[target_num_ - 1], in_y_pos_[target_num_ - 1], in_z_pos_[target_num_ - 1]), rate);
                 break;
-                
-                // ros::spinOnce();
-    		    // rate.sleep();
             }
-    		// else 
-    		// {
-    		// 	ros::spinOnce();
-    		//     rate.sleep();
-    		// } 
         }
-	// }
-	// else // global setpoints
-    // {
-        // while (ros::ok())
-        // {
         else // global setpoints
         {
             if (i < (goal_num_ - 1))
@@ -337,7 +449,9 @@ void OffboardControl::position_control(ros::NodeHandle nh, ros::Rate rate)
                 final_check_ = true;
                 enu_g_ = WGS84ToENU(goalTransfer(in_latitude_[goal_num_ -1], in_longitude_[goal_num_ -1], in_altitude_[goal_num_ -1]), ref_);
             }
-            vel_ = vel_limit(current_pose_, targetTransfer(enu_g_.x + x_offset_, enu_g_.y + y_offset_, enu_g_.z + z_offset_));
+            system("rosparam load $HOME/ros/catkin_ws/src/offboard/config/waypoints.yaml");
+            ros::param::get("v_desired", vel_desired_);
+            vel_ = vel_limit(vel_desired_, current_pose_, targetTransfer(enu_g_.x + x_offset_, enu_g_.y + y_offset_, enu_g_.z + z_offset_));
             target_pose_.pose.position.x = current_pose_.pose.position.x + vel_[0];
             target_pose_.pose.position.y = current_pose_.pose.position.y + vel_[1];
             target_pose_.pose.position.z = current_pose_.pose.position.z + vel_[2];
@@ -375,40 +489,34 @@ void OffboardControl::position_control(ros::NodeHandle nh, ros::Rate rate)
                             targetTransfer(enu_g_.x + x_offset_, enu_g_.y + y_offset_, enu_g_.z + z_offset_).pose.position.y,
                             targetTransfer(enu_g_.x + x_offset_, enu_g_.y + y_offset_, enu_g_.z + z_offset_).pose.position.z);
                 
-                std::cout << "\n[ INFO] ----- Hovering \n";
-                hover(targetTransfer(enu_g_.x + x_offset_, enu_g_.y + y_offset_, enu_g_.z + z_offset_), rate);
-                landing(targetTransfer(enu_g_.x + x_offset_, enu_g_.y + y_offset_, enu_g_.z + z_offset_), rate);
+                std::cout << "\n[ INFO] Hovering \n";
+                system("rosparam load $HOME/ros/catkin_ws/src/offboard/config/waypoints.yaml");
+                ros::param::get("hover_time", t_hover_);
+                hover(t_hover_, targetTransfer(enu_g_.x + x_offset_, enu_g_.y + y_offset_, enu_g_.z + z_offset_), rate);
+                // landing(targetTransfer(enu_g_.x + x_offset_, enu_g_.y + y_offset_, enu_g_.z + z_offset_), rate);
 
                 i = i + 1;
-                // ros::spinOnce();
-                // rate.sleep();
             }
-            // else if (check && final_check_)
             if (check && final_check_)
             {
                 std::printf("[ INFO] Reached FINAL position: [%.8f, %.8f, %.3f]\n", 
                             global_position_.latitude, global_position_.longitude, global_position_.altitude);
                 
-                std::cout << "\n[ INFO] ----- Hovering - Ready to LAND\n";
-                hover(targetTransfer(enu_g_.x + x_offset_, enu_g_.y + y_offset_, enu_g_.z + z_offset_), rate);
-                landing(targetTransfer(enu_g_.x + x_offset_, enu_g_.y + y_offset_, enu_g_.z + z_offset_), rate);
+                std::cout << "\n[ INFO] Hovering\n";
+                system("rosparam load $HOME/ros/catkin_ws/src/offboard/config/waypoints.yaml");
+                ros::param::get("hover_time", t_hover_);
+                hover(t_hover_, targetTransfer(enu_g_.x + x_offset_, enu_g_.y + y_offset_, enu_g_.z + z_offset_), rate);
+                // landing_final(targetTransfer(enu_g_.x + x_offset_, enu_g_.y + y_offset_, enu_g_.z + z_offset_), rate);
+                landing_marker(targetTransfer(enu_g_.x + x_offset_, enu_g_.y + y_offset_, enu_g_.z + z_offset_), rate);
                 break;
-                
-                // ros::spinOnce();
-                // rate.sleep();
             }
-            // else 
-            // {
-            //     ros::spinOnce();
-            //     rate.sleep();
-            // } 
         }
         ros::spinOnce();
     	rate.sleep();
     }
 }
 
-std::vector<double> OffboardControl::vel_limit(geometry_msgs::PoseStamped current, geometry_msgs::PoseStamped target)
+std::vector<double> OffboardControl::vel_limit(double v_desired, geometry_msgs::PoseStamped current, geometry_msgs::PoseStamped target)
 {
     double xc = current.pose.position.x;
     double yc = current.pose.position.y;
@@ -429,17 +537,17 @@ std::vector<double> OffboardControl::vel_limit(geometry_msgs::PoseStamped curren
     {
         vel.clear();
     }
-    system("rosparam load $HOME/ros/catkin_ws/src/offboard/config/waypoints.yaml");
-    ros::param::get("v_desired", vel_desired_);   
+    // system("rosparam load $HOME/ros/catkin_ws/src/offboard/config/waypoints.yaml");
+    // ros::param::get("v_desired", vel_desired_);   
     
-    vel.push_back((dx/d) * vel_desired_);
-    vel.push_back((dy/d) * vel_desired_);
-    vel.push_back((dz/d) * vel_desired_);
+    vel.push_back((dx/d) * v_desired);
+    vel.push_back((dy/d) * v_desired);
+    vel.push_back((dz/d) * v_desired);
 
     return vel;
 }
 
-bool OffboardControl::check_position(float error, geometry_msgs::PoseStamped current, geometry_msgs::PoseStamped target)
+bool OffboardControl::check_position(double error, geometry_msgs::PoseStamped current, geometry_msgs::PoseStamped target)
 {
 	double xt = target.pose.position.x;
 	double yt = target.pose.position.y;
@@ -460,7 +568,7 @@ bool OffboardControl::check_position(float error, geometry_msgs::PoseStamped cur
 	}
 }
 
-bool OffboardControl::check_orientation(float error, geometry_msgs::PoseStamped current, geometry_msgs::PoseStamped target)
+bool OffboardControl::check_orientation(double error, geometry_msgs::PoseStamped current, geometry_msgs::PoseStamped target)
 {
 	double currentx = current.pose.orientation.x;
 	double currenty = current.pose.orientation.y;
@@ -499,7 +607,7 @@ void OffboardControl::input_local_target()
 {
     double x[100], y[100], z[100];
 	std::cout << "[ INFO] Input Local position(s)" << std::endl;
-	std::cout << "Number of target(s): "; std::cin >> target_num_;
+	std::cout << "----- Number of target(s): "; std::cin >> target_num_;
 	if(!in_x_pos_.empty() || !in_y_pos_.empty() || !in_z_pos_.empty())
     {
         in_x_pos_.clear();
@@ -508,19 +616,19 @@ void OffboardControl::input_local_target()
     }
 	for (int i = 0; i < target_num_; i++)
 	{
-		std::cout << "Target (" << i+1 << ") position (in meter):" <<std::endl; 
+		std::cout << "----- Target (" << i+1 << ") position (in meter):" <<std::endl; 
 		std::cout << "x (" << i+1 << "): "; std::cin >> x[i]; in_x_pos_.push_back(x[i]);
 		std::cout << "y (" << i+1 << "): "; std::cin >> y[i]; in_y_pos_.push_back(y[i]);
 		std::cout << "z (" << i+1 << "): "; std::cin >> z[i]; in_z_pos_.push_back(z[i]);
 	}
-	std::cout << "Check offset value (0 < and < 1m): "; std::cin >> check_error_;
+	std::cout << "----- Check offset value (0 < and < 1m): "; std::cin >> check_error_;
 }
 
 void OffboardControl::input_global_target()
 {
     double lat[100], lon[100], alt[100];
 	std::cout << "[ INFO] Input GPS position(s)" << std::endl;
-	std::cout << "Number of goal(s): "; std::cin >> goal_num_;
+	std::cout << "----- Number of goal(s): "; std::cin >> goal_num_;
 	if(!in_latitude_.empty() || !in_longitude_.empty() || !in_altitude_.empty())
     {
         in_latitude_.clear();
@@ -529,13 +637,13 @@ void OffboardControl::input_global_target()
     }
 	for (int i = 0; i < goal_num_; i++)
 	{
-		std::cout << "Goal ("<< i+1 <<") position:" << std::endl;
+		std::cout << "----- Goal ("<< i+1 <<") position:" << std::endl;
 		std::cout << "Latitude " << i+1 << " (in degree): "; std::cin >> lat[i]; in_latitude_.push_back(lat[i]);
 		std::cout << "Longitude " << i+1 << " (in degree): "; std::cin >> lon[i]; in_longitude_.push_back(lon[i]);
 		std::cout << "Altitude " << i+1 << "  (in meter): "; std::cin >> alt[i]; alt[i] += global_position_.altitude; 
         in_altitude_.push_back(alt[i]);
 	}
-	std::cout << "Check offset value (0 < and < 1m): "; std::cin >> check_error_;
+	std::cout << "----- Check offset value (0 < and < 1m): "; std::cin >> check_error_;
 }
 
 void OffboardControl::input_target()
@@ -544,7 +652,7 @@ void OffboardControl::input_target()
 	std::cout << "[ INFO] (1) Manual Input || Load Parameter (2) ? (1/2)\n"; std::cin >> c;
 	if (c == '1')
 	{
-		std::cout << "Waypoint type: (3) Local || Global (4) ? (3/4)\n"; std::cin >> c;
+		std::cout << "[ INFO] Waypoint type: (3) Local || Global (4) ? (3/4)\n"; std::cin >> c;
 		if (c == '3')
 		{
 			input_local_target();
@@ -585,18 +693,18 @@ void OffboardControl::input_target()
 		ros::param::get("altitude", in_altitude_);
 		ros::param::get("goal_error", global_error_);
 
-		std::cout << "Waypoint type: (3) Local || Global (4) ? (3/4) \n"; std::cin >> c;
+		std::cout << "[ INFO] Waypoint type: (3) Local || Global (4) ? (3/4) \n"; std::cin >> c;
 		if (c == '3')
 		{
 			local_input_ = true;
 			check_error_ = local_error_;
 			for (int i = 0; i < target_num_; i++)
 			{
-				std::cout << "Target (" << i+1 << "): [" << in_x_pos_[i] << ", "
+				std::cout << "----- Target (" << i+1 << "): [" << in_x_pos_[i] << ", "
 														 << in_y_pos_[i] << ", "
 														 << in_z_pos_[i] << "]\n";
 			}
-			std::cout << "Check offset value: " << check_error_ << " (m)\n";
+			std::cout << "----- Check offset value: " << check_error_ << " (m)\n";
 		}
 		else if (c == '4')
 		{
@@ -605,11 +713,11 @@ void OffboardControl::input_target()
 			for (int i = 0; i < goal_num_; i++)
 			{
                 in_altitude_[i] += global_position_.altitude;
-				std::cout << "Goal (" << i+1 << "): [" << in_latitude_[i] << ", "
+				std::cout << "----- Goal (" << i+1 << "): [" << in_latitude_[i] << ", "
 													   << in_longitude_[i] << ", "
 													   << in_altitude_[i] << "]" << std::endl;
 			}
-			std::cout << "Check offset value: " << check_error_ << " (m)\n";
+			std::cout << "----- Check offset value: " << check_error_ << " (m)\n";
 		}
 		else input_target();
 	}

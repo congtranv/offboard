@@ -6,6 +6,7 @@
 #include <mavros_msgs/CommandBool.h>
 #include <mavros_msgs/SetMode.h>
 #include <std_msgs/Bool.h>
+#include <std_msgs/Float64.h>
 /******* local position *******/
 #include <geometry_msgs/PoseStamped.h>
 /******* global position *******/
@@ -33,26 +34,32 @@ const double a_sq = a * a;
 const double b_sq = b * b;
 const double e_sq = f * (2 - f);    // Square of Eccentricity
 
-bool global_position_received = false; // check receive global position
-bool gps_position_received = false; // check receive GPS raw position
+bool global_position_received = false; // check received global position
+bool gps_position_received = false; // check received GPS raw position
+// bool target_sub_received = false; // check received target from marker detector
+ros::Time target_sub_received;
 
 mavros_msgs::State current_state_; // check connection to pixhawk
 mavros_msgs::GPSRAW gps_position_; // gps raw position from pixhawk
 geometry_msgs::PoseStamped current_pose_; // current local position
+geometry_msgs::PoseStamped target_pose_sub_; // target pose from marker detector
 sensor_msgs::NavSatFix global_position_; // global position
-
 std_msgs::Bool human_trigger_; // trigger when detected human
-
-sensor_msgs::NavSatFix goalTransfer(double lat, double lon, double alt); // transfer lat, lon, alt setpoint to same message type with global_position
-geometry_msgs::PoseStamped targetTransfer(double x, double y, double z); // transfer x, y, z setpoint to same message type with local_position
+std_msgs::Float64 error_sub_; // error from marker detector
 
 inline void state_cb(const mavros_msgs::State::ConstPtr& msg);
 inline void localPose_cb(const geometry_msgs::PoseStamped::ConstPtr& msg);
 inline void globalPosition_cb(const sensor_msgs::NavSatFix::ConstPtr& msg);
 inline void gpsPosition_cb(const mavros_msgs::GPSRAW::ConstPtr& msg); 
 
+inline void target_cb(const geometry_msgs::PoseStamped::ConstPtr& msg);
+inline void error_cb(const std_msgs::Float64::ConstPtr& msg);
+
 inline void trigger_cb(const std_msgs::Bool::ConstPtr& msg);
 
+sensor_msgs::NavSatFix goalTransfer(double lat, double lon, double alt); // transfer lat, lon, alt setpoint to same message type with global_position
+geometry_msgs::PoseStamped targetTransfer(double x, double y, double z); // transfer x, y, z setpoint to same message type with local_position
+    
 class OffboardControl
 {
 private:
@@ -64,21 +71,24 @@ private:
     ros::Subscriber gps_pos_sub_;
 
     ros::Subscriber trigger_sub_;
+    ros::Subscriber target_sub_;
+    ros::Subscriber marker_error_sub_;
 
     ros::Publisher local_pos_pub_;
 
     ros::ServiceClient set_mode_client_;
     ros::ServiceClient arming_client_;
 
-    float t_hover_; // time set to drone when hovering
+    double t_hover_, t_stable_; // time set to drone when hovering
+
     double gps_lat, gps_lon, gps_alt; // gps latitude, longitude, altitude
-    float local_error_, global_error_; // offset for checking when drone go to near setpoints for local and global 
-    float check_error_; // offset for checking when drone go to near setpoints in main program
+    double local_error_, global_error_; // offset for checking when drone go to near setpoints for local and global 
+    double check_error_; // offset for checking when drone go to near setpoints in main program
     double distance_; // calculate the distance from current position to setpoint
     double x_off_[100], y_off_[100], z_off_[100]; // store a series of offset between local position and ENU converted from global position
     double x_offset_, y_offset_, z_offset_;
 
-    double vel_desired_; // desired velocity
+    double vel_desired_; //, vel_land_, vel_marker_; // desired velocity
     std::vector<double> vel_;
 
     bool final_check_ = false; // true == reached final point || false == NOT final point
@@ -102,8 +112,8 @@ private:
     sensor_msgs::NavSatFix ref_; // reference point to convert ECEF to ENU and vice versa
     geometry_msgs::Point offset_; // average offset in each axis
 
-    bool check_position(float error, geometry_msgs::PoseStamped current, geometry_msgs::PoseStamped target);
-    bool check_orientation(float error, geometry_msgs::PoseStamped current, geometry_msgs::PoseStamped target);
+    bool check_position(double error, geometry_msgs::PoseStamped current, geometry_msgs::PoseStamped target);
+    bool check_orientation(double error, geometry_msgs::PoseStamped current, geometry_msgs::PoseStamped target);
     void input_target();
     void input_local_target(); 
     void input_global_target();
@@ -113,7 +123,7 @@ private:
 
     double measureGPS(double lat1, double lon1, double alt1, double lat2, double lon2, double alt2);
     double distanceLocal(geometry_msgs::PoseStamped current, geometry_msgs::PoseStamped target);
-    
+
     geometry_msgs::Point WGS84ToECEF(sensor_msgs::NavSatFix wgs84);
     geographic_msgs::GeoPoint ECEFToWGS84(geometry_msgs::Point ecef);
     geometry_msgs::Point ECEFToENU(geometry_msgs::Point ecef, sensor_msgs::NavSatFix ref);
@@ -121,15 +131,16 @@ private:
     geometry_msgs::Point WGS84ToENU(sensor_msgs::NavSatFix wgs84, sensor_msgs::NavSatFix ref);
     geographic_msgs::GeoPoint ENUToWGS84(geometry_msgs::Point enu, sensor_msgs::NavSatFix ref);
 
+    void takeOff(ros::Rate rate);
+    void hover(double hover_time, geometry_msgs::PoseStamped target, ros::Rate rate);
+    void landing(geometry_msgs::PoseStamped setpoint, ros::Rate rate);
+    void landing_final(geometry_msgs::PoseStamped setpoint, ros::Rate rate);
+    void landing_marker(geometry_msgs::PoseStamped setpoint, ros::Rate rate);
+    std::vector<double> vel_limit(double v_desired, geometry_msgs::PoseStamped current, geometry_msgs::PoseStamped target);
+
 public:
     OffboardControl();
-  
-    void takeOff(ros::Rate rate);
-    void hover(geometry_msgs::PoseStamped target, ros::Rate rate);
-    void landing(geometry_msgs::PoseStamped setpoint, ros::Rate rate);
     void position_control(ros::NodeHandle nh, ros::Rate rate);
-    std::vector<double> vel_limit(geometry_msgs::PoseStamped current, geometry_msgs::PoseStamped target);
-
     ~OffboardControl();  
 };
 

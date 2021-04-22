@@ -11,12 +11,15 @@ int main(int argc, char **argv)
 
     ros::Publisher trigger_pub = nh.advertise<std_msgs::Bool>("/human_trigger", 100);
 
-    ros::Rate loop_rate(5);
+    ros::Rate loop_rate(10);
 
     while (ros::ok())
     {
         system("rosparam load $HOME/ros/catkin_ws/src/offboard/config/waypoints.yaml");
         ros::param::get("human_trig", trigger);
+        
+        trig.data = trigger;
+        trigger_pub.publish(trig);
         if (trigger)
         {
             std::cout << "Human trigger: true\n";
@@ -26,10 +29,7 @@ int main(int argc, char **argv)
             std::cout << "Human trigger: false\n";
         }
         
-        trig.data = trigger;
-        trigger_pub.publish(trig);
-        
-        // ros::spinOnce(); 
+        ros::spinOnce();
         loop_rate.sleep();
     }
     

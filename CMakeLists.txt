@@ -42,16 +42,20 @@ add_executable(offboard src/offboard_node.cpp)
 add_executable(hover src/hover_node.cpp)
 add_executable(setmode_offb src/setmode_offb.cpp)
 add_executable(trigger_pub src/trigger_pub.cpp)
+add_executable(target_pub src/target_pub.cpp)
 
 target_link_libraries(offboard
   offboard_lib
 )
 target_link_libraries(hover
-  offboard_lib
+  ${catkin_LIBRARIES}
 )
 target_link_libraries(setmode_offb
   offboard_lib
 )
 target_link_libraries(trigger_pub
-  offboard_lib
+  ${catkin_LIBRARIES}
+)
+target_link_libraries(target_pub
+  ${catkin_LIBRARIES}
 )

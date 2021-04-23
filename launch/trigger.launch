@@ -1,0 +1,4 @@
+<launch>
+    <rosparam command="load" file="$(find offboard)/config/config.yaml" />
+    <node name="trigger_pub" pkg="offboard" type="trigger_pub" output="screen"></node>
+</launch>

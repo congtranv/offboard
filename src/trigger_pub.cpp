@@ -15,7 +15,6 @@ int main(int argc, char **argv)
 
     while (ros::ok())
     {
-        system("rosparam load $HOME/ros/catkin_ws/src/offboard/config/waypoints.yaml");
         ros::param::get("human_trig", trigger);
         
         trig.data = trigger;

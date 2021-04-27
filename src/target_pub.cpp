@@ -7,7 +7,7 @@
 std::vector<double> x, y, z;
 geometry_msgs::PoseStamped target, current;
 std_msgs::Float64 check;
-int max, min;
+double max, min, range;
 
 inline void local_cb(const geometry_msgs::PoseStamped::ConstPtr& msg)
 {
@@ -27,13 +27,11 @@ int main(int argc, char **argv)
 
     while (ros::ok())
     {
-        min = 3; max = 6;
-        // x.push_back(rand() % (max - min + 1) + min);
-        // y.push_back(rand() % (max - min + 1) + min);
-        // z.push_back(rand() % (max - min + 1) + min);
+        min = 4.5; max = 5.5;
+        range = (max-min) * ((((double) rand()) / (double) RAND_MAX)) + min ;
         
-        target.pose.position.x = rand() % (max - min + 1) + min;
-        target.pose.position.y = 0; //rand() % (max - min + 1) + min;
+        target.pose.position.x = range;
+        target.pose.position.y = 0;
         target.pose.position.z = 0;
         check.data = sqrt((5 - current.pose.position.x)*(5 - current.pose.position.x)
         + (0 - current.pose.position.y)*(0 - current.pose.position.y));

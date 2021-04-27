@@ -86,7 +86,7 @@
 #### 2.2 run *offboard_node*: 
 
   ```
-  rosrun offboard offboard
+  roslaunch offboard offboard.launch
   ```
 - **manual input or load input from waypoints.yaml config file**
   

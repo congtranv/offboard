@@ -36,8 +36,8 @@ const double e_sq = f * (2 - f);    // Square of Eccentricity
 
 bool global_position_received = false; // check received global position
 bool gps_position_received = false; // check received GPS raw position
-// bool target_sub_received = false; // check received target from marker detector
-ros::Time target_sub_received;
+bool target_sub_received = false; // check received target from marker detector
+// ros::Time target_sub_received;
 
 mavros_msgs::State current_state_; // check connection to pixhawk
 mavros_msgs::GPSRAW gps_position_; // gps raw position from pixhawk

@@ -1,5 +1,5 @@
-#ifndef OFFBOARD_H
-#define OFFBOARD_H
+#ifndef OFFBOARD_H_
+#define OFFBOARD_H_
 
 #include <ros/ros.h>
 #include <mavros_msgs/State.h>

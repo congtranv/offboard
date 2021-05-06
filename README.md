@@ -92,9 +92,9 @@
 #### 2.2 run *offboard_node*: 
 
   ```
-  rosrun offboard offboard
+  roslaunch offboard offboard.launch
   ```
-- **manual input or load input from waypoints.yaml config file**
+- **manual input or load input from config/config.yaml config file**
   
 #### 2.3 ARM and switch mode
 - **on remote controller** switch to ARM, then switch flight mode to OFFBOARD

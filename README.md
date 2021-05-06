@@ -3,7 +3,7 @@
 ***
 **WARNING**
 
-Offboard control is dangerous. If you are operating on a real vehicle be sure to have a way of gaining back manual control in case something goes wrong.
+*OFFBOARD* control is dangerous. If you are operating on a real vehicle be sure to have a way of gaining back manual control in case something goes wrong.
 ***
 
 ## contain

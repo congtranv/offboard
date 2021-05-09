@@ -8,6 +8,9 @@ find_package(catkin REQUIRED COMPONENTS
   rospy
   std_msgs
   roslaunch
+  mav_trajectory_generation
+  mav_trajectory_generation_ros
+  mav_msgs
 )
 
 catkin_package(
@@ -47,11 +50,11 @@ target_link_libraries(offboard
   offboard_lib
 )
 target_link_libraries(hover
-  offboard_lib
+  ${catkin_LIBRARIES}
 )
 target_link_libraries(setmode_offb
   offboard_lib
 )
 target_link_libraries(trigger_pub
-  offboard_lib
+  ${catkin_LIBRARIES}
 )

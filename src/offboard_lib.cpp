@@ -1,10 +1,5 @@
 #include "offboard/offboard.h"
 
-OffboardControl::OffboardControl()
-{
-	// constructor
-}
-
 void state_cb(const mavros_msgs::State::ConstPtr& msg)
 {
     current_state_ = *msg;
@@ -70,6 +65,30 @@ void OffboardControl::hover(geometry_msgs::PoseStamped target, ros::Rate rate)
         ros::spinOnce();
     	rate.sleep();
     }
+}
+
+void polynomial_optimization_linear(geometry_msgs::PoseStamped start_pose, geometry_msgs::PoseStamped middle_pose, geometry_msgs::PoseStamped end_pose)
+{
+    start.makeStartOrEnd(Eigen::Vector3d(start_pose.pose.position.x,start_pose.pose.position.y,start_pose.pose.position.z), derivative_to_optimize);
+    vertices.push_back(start);
+
+    middle.addConstraint(mav_trajectory_generation::derivative_order::POSITION, Eigen::Vector3d(middle_pose.pose.position.x,middle_pose.pose.position.y,middle_pose.pose.position.z));
+    vertices.push_back(middle);
+
+    end.makeStartOrEnd(Eigen::Vector3d(end_pose.pose.position.x,end_pose.pose.position.y,end_pose.pose.position.z), derivative_to_optimize);
+    vertices.push_back(end);
+
+    segment_times = estimateSegmentTimes(vertices, v_max, a_max);
+
+
+    opt.setupFromVertices(vertices, segment_times, derivative_to_optimize);
+    opt.solveLinear();
+
+    opt.getSegments(&segments);
+    opt.getTrajectory(&trajectory);
+
+    mav_trajectory_generation::drawMavTrajectory(trajectory, distance, frame_id, &markers);
+    std::cout << segments << "\n";
 }
 
 void OffboardControl::landing(geometry_msgs::PoseStamped setpoint, ros::Rate rate)
@@ -216,6 +235,7 @@ void OffboardControl::position_control(ros::NodeHandle nh, ros::Rate rate)
 
     if (local_input_ == true) // local setpoint
     {
+        polynomial_optimization_linear(targetTransfer(in_x_pos_[0], in_y_pos_[0], in_z_pos_[0]), targetTransfer(in_x_pos_[1], in_y_pos_[1], in_z_pos_[1]), targetTransfer(in_x_pos_[2], in_y_pos_[2], in_z_pos_[2]));
         target_pose_.pose.position.x = in_x_pos_[0];
         target_pose_.pose.position.y = in_y_pos_[0];
         target_pose_.pose.position.z = in_z_pos_[0];
@@ -803,9 +823,4 @@ geometry_msgs::PoseStamped targetTransfer(double x, double y, double z)
     target.pose.position.y = y;
     target.pose.position.z = z;
     return target;
-}
-
-OffboardControl::~OffboardControl()
-{
-	// destructor
 }

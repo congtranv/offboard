@@ -4,7 +4,7 @@ z_takeoff: 3 # m
 
 hover_time: 10 # second(s)
 
-num_of_target: 4
+num_of_target: 3
 x_pos: [0, 6, 6, 0] # m
 y_pos: [0, 0, 6, 6] # m
 z_pos: [5, 6, 7, 8] # m

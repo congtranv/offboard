@@ -9,6 +9,10 @@
                 "/opt/ros/melodic/include/**",
                 "/home/congtranv/ros/catkin_ws/devel/include/**",
                 "/home/congtranv/ros/catkin_ws/src/offboard/include/**",
+                "/home/congtranv/ros/catkin_ws/src/mav_trajectory_generation/mav_trajectory_generation/include/**",
+                "/home/congtranv/ros/catkin_ws/src/mav_trajectory_generation/mav_trajectory_generation_ros/include/**",
+                "/home/congtranv/ros/catkin_ws/src/mav_comm/mav_msgs/include/**",
+                "/home/congtranv/ros/catkin_ws/src/mav_trajectory_generation/mav_visualization/include/**",
                 "/usr/include/**"
             ],
             "name": "ROS",

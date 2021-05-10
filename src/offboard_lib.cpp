@@ -173,7 +173,17 @@ void OffboardControl::landing_final(geometry_msgs::PoseStamped setpoint, ros::Ra
             std::printf("----- Descending - %.3f (m)\n", current_pose_.pose.position.z);
         }
         check_land = check_position(check_error_, current_pose_, targetTransfer(setpoint.pose.position.x, setpoint.pose.position.y, 0));
-        if (check_land)
+        if (current_state_.system_status != 4)
+        {
+            std::printf("\n[ INFO] Landing detected\n");
+            set_mode_.request.custom_mode = "AUTO.LAND";
+            if( set_mode_client_.call(set_mode_) && set_mode_.response.mode_sent)
+            {
+                std::printf("[ INFO] --------------- LAND ---------------\n");
+                break;
+            }
+        }
+        else if (check_land)
         {
             set_mode_.request.custom_mode = "AUTO.LAND";
             if( set_mode_client_.call(set_mode_) && set_mode_.response.mode_sent)
@@ -181,92 +191,16 @@ void OffboardControl::landing_final(geometry_msgs::PoseStamped setpoint, ros::Ra
                 std::printf("[ INFO] --------------- LAND ---------------\n");
             }
         }
-        ros::spinOnce();
-        rate.sleep();
+        else
+        {
+            ros::spinOnce();
+            rate.sleep();
+        }
     }
 }
 
 void OffboardControl::landing_marker(geometry_msgs::PoseStamped setpoint, ros::Rate rate)
 {
-    /*
-    bool check_error = false;
-    bool check_setpoint = false;
-    geometry_msgs::PoseStamped marker_pose;
-    
-    ros::Time t_check_target = ros::Time::now();
-    while (ros::ok() && !check_error)
-    {
-        if (target_sub_received != ros::Time::now())
-        {
-            std::cout << "[ INFO] Finding target \n";
-            // system("rosparam load $HOME/ros/catkin_ws/src/offboard/config/waypoints.yaml");
-            ros::param::get("stable_time", t_stable_);
-            hover(t_stable_, current_pose_, rate);
-            if ((ros::Time::now() - t_check_target) > ros::Duration(t_stable_ + 30))
-            {
-                std::cout << "[ WARN] NO TARGET - LAND\n";
-                landing_final(setpoint, rate);
-                break;
-            }
-        }
-        else
-        {
-            marker_pose = target_pose_sub_;
-            check_setpoint = false;
-            std::cout << "\n[ INFO] Received target\n";            
-            // std::printf("[ INFO] Setpoint: [%.3f, %.3f, %.3f]\n", marker_pose.pose.position.x, marker_pose.pose.position.y, marker_pose.pose.position.z);
-             
-            // system("rosparam load $HOME/ros/catkin_ws/src/offboard/config/waypoints.yaml");
-            ros::param::get("stable_time", t_stable_);
-            
-            while (ros::ok() && !check_setpoint)
-            {  
-                std::printf("\n[ INFO] Setpoint: [%.3f, %.3f, %.3f]\n", marker_pose.pose.position.x, marker_pose.pose.position.y, marker_pose.pose.position.z);
-                check_error = (error_sub_.data < 0.2) ? true:false;
-                std::cout << "----- check error: " << error_sub_.data << "\n";
-                if (check_error)
-                {
-                    geometry_msgs::PoseStamped setpoint_land;
-                    setpoint_land = targetTransfer(marker_pose.pose.position.x, marker_pose.pose.position.y, setpoint.pose.position.z);
-                    std::printf("\n[ INFO] Checked error @ [%.3f, %.3f, %.3f]\n", current_pose_.pose.position.x, current_pose_.pose.position.y, current_pose_.pose.position.z);
-
-                    std::cout << "[ INFO] Hovering - ready to LAND\n";
-                    hover(t_stable_, targetTransfer(marker_pose.pose.position.x, marker_pose.pose.position.y, setpoint.pose.position.z), rate);
-                    landing_final(targetTransfer(marker_pose.pose.position.x, marker_pose.pose.position.y, setpoint.pose.position.z), rate);
-                    break;
-                }
-                else
-                {
-                    // system("rosparam load $HOME/ros/catkin_ws/src/offboard/config/waypoints.yaml");
-                    ros::param::get("v_marker", vel_desired_);
-                    std::vector<double> v_setpoint_ = vel_limit(vel_desired_, current_pose_, targetTransfer(marker_pose.pose.position.x, marker_pose.pose.position.y, setpoint.pose.position.z));
-
-                    target_pose_.pose.position.x = current_pose_.pose.position.x + v_setpoint_[0];
-                    target_pose_.pose.position.y = current_pose_.pose.position.y + v_setpoint_[1];
-                    target_pose_.pose.position.z = current_pose_.pose.position.z + v_setpoint_[2];
-
-                    target_pose_.header.stamp = ros::Time::now();
-                    local_pos_pub_.publish(target_pose_);
-                        
-                    check_setpoint = check_position(check_error_, current_pose_, targetTransfer(marker_pose.pose.position.x, marker_pose.pose.position.y, setpoint.pose.position.z));
-                    t_check_target = ros::Time::now();
-                    if (check_setpoint)
-                    {
-                        std::printf("\n[ INFO] Checked setpoint, NOT check error\n");
-                        hover(t_stable_, current_pose_ , rate);
-                    }
-                    
-                }
-
-                ros::spinOnce();
-                rate.sleep();
-            }
-        }
-
-        ros::spinOnce();
-        rate.sleep();
-    }  
-    */
     bool check_error = false;
     bool check_setpoint = false;
     ros::Time t_check_target;
@@ -275,10 +209,10 @@ void OffboardControl::landing_marker(geometry_msgs::PoseStamped setpoint, ros::R
     while (!target_sub_received)
 	{
 		hover(t_stable_, targetTransfer(current_pose_.pose.position.x, current_pose_.pose.position.y, current_pose_.pose.position.z), rate);
-        std::cout << "\n[ INFO] Finding target\n"; 
+        std::cout << "\n[ INFO] Finding marker\n"; 
 		if ((ros::Time::now() - t_check_target) > ros::Duration(30+t_stable_))
 		{
-			std::cout << "\n[ WARN] NO TARGET\n";
+			std::cout << "\n[ WARN] NO MARKER DETECTED\n";
 			landing_final(targetTransfer(current_pose_.pose.position.x, current_pose_.pose.position.y, current_pose_.pose.position.z), rate);
             break;
 		}           

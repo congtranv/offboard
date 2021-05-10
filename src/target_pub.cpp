@@ -23,7 +23,7 @@ int main(int argc, char **argv)
     ros::Publisher error_pub = nh.advertise<std_msgs::Float64>("/check_error_pos", 100);
     ros::Subscriber local_sub = nh.subscribe<geometry_msgs::PoseStamped>("mavros/local_position/pose", 100, local_cb);
 
-    ros::Rate loop_rate(10);
+    ros::Rate loop_rate(10.0);
 
     while (ros::ok())
     {

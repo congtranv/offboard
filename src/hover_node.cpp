@@ -22,7 +22,7 @@ int main(int argc, char **argv)
     ros::Publisher local_pos_pub = nh.advertise<geometry_msgs::PoseStamped>
             ("mavros/setpoint_position/local", 10);
 
-    ros::Rate rate(20.0);
+    ros::Rate rate(10.0);
 
     while(ros::ok() && !current_state.connected)
 	{

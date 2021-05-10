@@ -7,7 +7,7 @@ int main(int argc, char **argv)
     ros::NodeHandle nh;
 
     // the setpoint publishing rate MUST be faster than 2Hz
-    ros::Rate rate_(10);
+    ros::Rate rate_(10.0);
 
     OffboardControl offboard;
     offboard.position_control(nh, rate_);

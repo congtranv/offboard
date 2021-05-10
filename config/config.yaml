@@ -6,7 +6,7 @@ hover_time: 10 # second(s)
 stable_time: 3 # second(s)
 
 num_of_target: 2
-x_pos: [3, 4, 6, 0] # m
+x_pos: [1, 6, 6, 0] # m
 y_pos: [0, 0, 6, 6] # m
 z_pos: [5, 5, 7, 8] # m
 target_error: 0.1 # m

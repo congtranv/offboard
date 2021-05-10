@@ -10,7 +10,7 @@ int main(int argc, char **argv)
     ros::ServiceClient set_mode_client = nh.serviceClient<mavros_msgs::SetMode> 
             ("mavros/set_mode");
         
-    ros::Rate rate(20.0);
+    ros::Rate rate(10.0);
 
     // arm
     mavros_msgs::CommandBool arm_cmd;

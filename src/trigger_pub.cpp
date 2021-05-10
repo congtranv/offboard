@@ -11,7 +11,7 @@ int main(int argc, char **argv)
 
     ros::Publisher trigger_pub = nh.advertise<std_msgs::Bool>("/human_trigger", 100);
 
-    ros::Rate loop_rate(10);
+    ros::Rate loop_rate(10.0);
 
     while (ros::ok())
     {

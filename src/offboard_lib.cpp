@@ -330,8 +330,8 @@ void OffboardControl::position_control(ros::NodeHandle nh, ros::Rate rate)
         ros::spinOnce();
         rate.sleep();
     }
-    std::printf("\nref_: %.8f, %.8f, %.8f\n", ref_.latitude, ref_.longitude, ref_.altitude);
-    std::printf("enu_c_: %.3f, %.3f, %.3f\n", enu_c_.x, enu_c_.y, enu_c_.z);
+    // std::printf("\nref_: %.8f, %.8f, %.8f\n", ref_.latitude, ref_.longitude, ref_.altitude);
+    // std::printf("enu_c_: %.3f, %.3f, %.3f\n", enu_c_.x, enu_c_.y, enu_c_.z);
     for(int i = 100; i > 0; --i)
     {
         x_offset_ = x_offset_ + x_off_[i]/100;
@@ -340,8 +340,8 @@ void OffboardControl::position_control(ros::NodeHandle nh, ros::Rate rate)
     }
     std::printf("\n[ INFO] Local position: [%.3f, %.3f, %.3f]\n", current_pose_.pose.position.x, current_pose_.pose.position.y, current_pose_.pose.position.z);
     std::printf("[ INFO] GPS position: [%.8f, %.8f, %.3f]\n", global_position_.latitude, global_position_.longitude, global_position_.altitude);
-    std::printf("\nref_: %.8f, %.8f, %.8f\n", ref_.latitude, ref_.longitude, ref_.altitude);
-    std::printf("offset: %.3f, %.3f, %.3f\n", x_offset_, y_offset_, z_offset_);
+    // std::printf("\nref_: %.8f, %.8f, %.8f\n", ref_.latitude, ref_.longitude, ref_.altitude);
+    // std::printf("offset: %.3f, %.3f, %.3f\n", x_offset_, y_offset_, z_offset_);
 
 	input_target();
 
@@ -427,7 +427,7 @@ void OffboardControl::position_control(ros::NodeHandle nh, ros::Rate rate)
                 // system("rosparam load $HOME/ros/catkin_ws/src/offboard/config/waypoints.yaml");
                 ros::param::get("hover_time", t_hover_);
                 hover(t_hover_, targetTransfer(in_x_pos_[i], in_y_pos_[i], in_z_pos_[i]), rate);
-                // landing(targetTransfer(in_x_pos_[i], in_y_pos_[i], in_z_pos_[i]), rate);
+                // landing(targetTransfer(in_x_pos_[i], in_y_pos_[i], in_z_pos_[i]), rate); // use to land at each setpoint and return 
 
                 i = i + 1;
     		}
@@ -440,8 +440,8 @@ void OffboardControl::position_control(ros::NodeHandle nh, ros::Rate rate)
                 // system("rosparam load $HOME/ros/catkin_ws/src/offboard/config/waypoints.yaml");
                 ros::param::get("hover_time", t_hover_);
                 hover(t_hover_, targetTransfer(in_x_pos_[target_num_ - 1], in_y_pos_[target_num_ - 1], in_z_pos_[target_num_ - 1]), rate);
-                // landing_final(targetTransfer(in_x_pos_[target_num_ - 1], in_y_pos_[target_num_ - 1], in_z_pos_[target_num_ - 1]), rate);
-                landing_marker(targetTransfer(in_x_pos_[target_num_ - 1], in_y_pos_[target_num_ - 1], in_z_pos_[target_num_ - 1]), rate);
+                landing_final(targetTransfer(in_x_pos_[target_num_ - 1], in_y_pos_[target_num_ - 1], in_z_pos_[target_num_ - 1]), rate); // use to land immediately at final setpoint
+                // landing_marker(targetTransfer(in_x_pos_[target_num_ - 1], in_y_pos_[target_num_ - 1], in_z_pos_[target_num_ - 1]), rate); // use to land with marker detector
                 break;
             }
         }
@@ -451,15 +451,15 @@ void OffboardControl::position_control(ros::NodeHandle nh, ros::Rate rate)
             {
                 final_check_ = false;
                 enu_g_ = WGS84ToENU(goalTransfer(in_latitude_[i], in_longitude_[i], in_altitude_[i]), ref_);
-                std::printf("\nref_: %.8f, %.8f, %.8f\n", ref_.latitude, ref_.longitude, ref_.altitude);
-                std::printf("enu_g_: %.3f, %.3f, %.3f\n", enu_g_.x, enu_g_.y, enu_g_.z);
+                // std::printf("\nref_: %.8f, %.8f, %.8f\n", ref_.latitude, ref_.longitude, ref_.altitude);
+                // std::printf("enu_g_: %.3f, %.3f, %.3f\n", enu_g_.x, enu_g_.y, enu_g_.z);
             }
             else
             {
                 final_check_ = true;
                 enu_g_ = WGS84ToENU(goalTransfer(in_latitude_[goal_num_ -1], in_longitude_[goal_num_ -1], in_altitude_[goal_num_ -1]), ref_);
-                std::printf("\nref_: %.8f, %.8f, %.8f\n", ref_.latitude, ref_.longitude, ref_.altitude);
-                std::printf("enu_g_: %.3f, %.3f, %.3f\n", enu_g_.x, enu_g_.y, enu_g_.z);
+                // std::printf("\nref_: %.8f, %.8f, %.8f\n", ref_.latitude, ref_.longitude, ref_.altitude);
+                // std::printf("enu_g_: %.3f, %.3f, %.3f\n", enu_g_.x, enu_g_.y, enu_g_.z);
             }
             // system("rosparam load $HOME/ros/catkin_ws/src/offboard/config/waypoints.yaml");
             ros::param::get("v_desired", vel_desired_);
@@ -505,7 +505,7 @@ void OffboardControl::position_control(ros::NodeHandle nh, ros::Rate rate)
                 // system("rosparam load $HOME/ros/catkin_ws/src/offboard/config/waypoints.yaml");
                 ros::param::get("hover_time", t_hover_);
                 hover(t_hover_, targetTransfer(enu_g_.x + x_offset_, enu_g_.y + y_offset_, enu_g_.z + z_offset_), rate);
-                // landing(targetTransfer(enu_g_.x + x_offset_, enu_g_.y + y_offset_, enu_g_.z + z_offset_), rate);
+                // landing(targetTransfer(enu_g_.x + x_offset_, enu_g_.y + y_offset_, enu_g_.z + z_offset_), rate); // use to land at each setpoint and return
 
                 i = i + 1;
             }
@@ -518,8 +518,8 @@ void OffboardControl::position_control(ros::NodeHandle nh, ros::Rate rate)
                 // system("rosparam load $HOME/ros/catkin_ws/src/offboard/config/waypoints.yaml");
                 ros::param::get("hover_time", t_hover_);
                 hover(t_hover_, targetTransfer(enu_g_.x + x_offset_, enu_g_.y + y_offset_, enu_g_.z + z_offset_), rate);
-                // landing_final(targetTransfer(enu_g_.x + x_offset_, enu_g_.y + y_offset_, enu_g_.z + z_offset_), rate);
-                landing_marker(targetTransfer(enu_g_.x + x_offset_, enu_g_.y + y_offset_, enu_g_.z + z_offset_), rate);
+                landing_final(targetTransfer(enu_g_.x + x_offset_, enu_g_.y + y_offset_, enu_g_.z + z_offset_), rate); // use to land immediately at final setpoint
+                // landing_marker(targetTransfer(enu_g_.x + x_offset_, enu_g_.y + y_offset_, enu_g_.z + z_offset_), rate); // use to land with marker detector
                 break;
             }
         }

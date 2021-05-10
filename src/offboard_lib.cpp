@@ -340,8 +340,8 @@ void OffboardControl::position_control(ros::NodeHandle nh, ros::Rate rate)
     }
     std::printf("\n[ INFO] Local position: [%.3f, %.3f, %.3f]\n", current_pose_.pose.position.x, current_pose_.pose.position.y, current_pose_.pose.position.z);
     std::printf("[ INFO] GPS position: [%.8f, %.8f, %.3f]\n", global_position_.latitude, global_position_.longitude, global_position_.altitude);
-    // std::printf("\nref_: %.8f, %.8f, %.8f\n", ref_.latitude, ref_.longitude, ref_.altitude);
-    // std::printf("offset: %.3f, %.3f, %.3f\n", x_offset_, y_offset_, z_offset_);
+    std::printf("\nref_: %.8f, %.8f, %.3f\n", ref_.latitude, ref_.longitude, ref_.altitude);
+    std::printf("offset: %.3f, %.3f, %.3f\n\n", x_offset_, y_offset_, z_offset_);
 
 	input_target();
 
@@ -723,9 +723,7 @@ void OffboardControl::input_target()
 			for (int i = 0; i < goal_num_; i++)
 			{
                 in_altitude_[i] += global_position_.altitude;
-				std::cout << "----- Goal (" << i+1 << "): [" << in_latitude_[i] << ", "
-													   << in_longitude_[i] << ", "
-													   << in_altitude_[i] << "]" << std::endl;
+				std::printf("----- Goal (%d): [%.8f, %.8f, %.3f]\n", i+1, in_latitude_[i], in_longitude_[i], in_altitude_[i]);
 			}
 			std::cout << "----- Check offset value: " << check_error_ << " (m)\n";
 		}

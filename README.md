@@ -7,14 +7,14 @@
 ***
 
 ## contain
-- *include/offboard/offboard.h* : header offboard
+- *include/offboard/offboard.h* : declare function for offboard node
+- *src/offboard_lib.cpp*    : define function for offboard node
+- *src/offboard_node.cpp*   : offboard node use position control 
+- *src/hover_node.cpp*      : node to keep drone hovering on a height
 
-- *src/hover_node.cpp*      : keep drone hovering on input z height
-- *src/offboard_node.cpp*   : initial ros node
-- *src/offboard_lib.cpp*    : library for offboard node
 - *src/setmode_offb.cpp*    : set OFFBOARD mode and ARM vehicle in simulation
 
-- *config/waypoints.yaml*   : prepared params to load into offboard node
+- *config/config.yaml*      : prepared params to load into offboard node
 - *package.xml*             : ros manifests
 - *CMakeLists.txt*          : CMakeLists
 

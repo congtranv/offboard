@@ -5,19 +5,19 @@ z_takeoff: 3 # m
 hover_time: 10 # second(s)
 stable_time: 3 # second(s)
 
-num_of_target: 2
-x_pos: [1, 6, 6, 0] # m
-y_pos: [0, 0, 6, 6] # m
-z_pos: [5, 5, 7, 8] # m
+num_of_target: 5
+x_pos: [0, 6, 6, 0, 0] # m
+y_pos: [0, 0, 6, 6, 0] # m
+z_pos: [7, 7, 7, 7, 7] # m
 target_error: 0.1 # m
 
 num_of_goal: 3
 latitude: [21.0065275, 21.0065305, 21.0065295]
-longitude: [105.8428991, 105.8432921, 105.8430418]
-altitude: [5, 6, 7] # m
+longitude: [105.8428991, 105.8432921, 105.8430000]
+altitude: [7, 7, 7] # m
 goal_error: 0.3 # m
 
-v_desired: 0.5 # m/s
+v_desired: 0.7 # m/s
 v_land: 0.3 # m/s
 v_marker: 0.1 # m/s
 human_trig: false

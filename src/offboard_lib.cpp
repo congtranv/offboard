@@ -173,7 +173,7 @@ void OffboardControl::landing_final(geometry_msgs::PoseStamped setpoint, ros::Ra
             std::printf("----- Descending - %.3f (m)\n", current_pose_.pose.position.z);
         }
         check_land = check_position(check_error_, current_pose_, targetTransfer(setpoint.pose.position.x, setpoint.pose.position.y, 0));
-        if (current_state_.system_status != 4)
+        if (current_state_.system_status == 3)
         {
             std::printf("\n[ INFO] Landing detected\n");
             set_mode_.request.custom_mode = "AUTO.LAND";
@@ -484,7 +484,7 @@ void OffboardControl::position_control(ros::NodeHandle nh, ros::Rate rate)
                         targetTransfer(enu_g_.x + x_offset_, enu_g_.y + y_offset_, enu_g_.z + z_offset_).pose.position.z);
 
             distance_ = distanceLocal(current_pose_, targetTransfer(enu_g_.x + x_offset_, enu_g_.y + y_offset_, enu_g_.z + z_offset_));
-            std::printf("Distance to target: %.3f (m) \n", distance_);
+            std::printf("Distance to goal: %.3f (m) \n", distance_);
 
             bool check = check_position(check_error_, current_pose_, targetTransfer(enu_g_.x + x_offset_, enu_g_.y + y_offset_, enu_g_.z + z_offset_));
             std::cout << check << "\n" << std::endl;

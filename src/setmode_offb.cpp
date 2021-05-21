@@ -1,4 +1,6 @@
-#include "offboard/offboard.h"
+#include <ros/ros.h>
+#include <mavros_msgs/SetMode.h>
+#include <mavros_msgs/CommandBool.h>
 
 int main(int argc, char **argv) 
 {

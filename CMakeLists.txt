@@ -5,12 +5,9 @@ find_package(catkin REQUIRED COMPONENTS
   geometry_msgs
   mavros_msgs
   roscpp
+  roslaunch
   rospy
   std_msgs
-  roslaunch
-  mav_trajectory_generation
-  mav_trajectory_generation_ros
-  mav_msgs
 )
 
 catkin_package(
@@ -20,11 +17,6 @@ catkin_package(
 #  DEPENDS system_lib
 )
 
-###########
-## Build ##
-###########
-
-## Specify additional locations of header files
 include_directories(
   include
   ${catkin_INCLUDE_DIRS}
@@ -32,29 +24,19 @@ include_directories(
 
 roslaunch_add_file_check(launch)
 
-add_library(
-  offboard_lib
+add_library(offboard_lib
   src/offboard_lib.cpp
 )
-
 target_link_libraries(offboard_lib
   ${catkin_LIBRARIES}
 )
 
-add_executable(offboard src/offboard_node.cpp)
-add_executable(hover src/hover_node.cpp)
-add_executable(setmode_offb src/setmode_offb.cpp)
-add_executable(trigger_pub src/trigger_pub.cpp)
+add_executable(offboard_node src/offboard_node.cpp)
+target_link_libraries(offboard_node
+  offboard_lib
+)
 
-target_link_libraries(offboard
-  offboard_lib
-)
-target_link_libraries(hover
-  ${catkin_LIBRARIES}
-)
+add_executable(setmode_offb src/setmode_offb.cpp)
 target_link_libraries(setmode_offb
-  offboard_lib
-)
-target_link_libraries(trigger_pub
   ${catkin_LIBRARIES}
 )

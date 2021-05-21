@@ -68,5 +68,9 @@
         "typeindex": "cpp",
         "typeinfo": "cpp"
     },
-    "ros.distro": "melodic"
+    "ros.distro": "melodic",
+    "python.analysis.extraPaths": [
+        "/home/congtranv/ros/catkin_ws/devel/lib/python2.7/dist-packages",
+        "/opt/ros/melodic/lib/python2.7/dist-packages"
+    ]
 }

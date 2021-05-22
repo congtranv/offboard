@@ -225,11 +225,7 @@ std::vector<double> velLimit(double v_desired, geometry_msgs::PoseStamped curren
     double d = sqrt(dx*dx + dy*dy + dz*dz);
 
     std::vector<double> vel;
-    // if (!vel.empty())
-    // {
-    //     vel.clear();
-    // }
-    
+
     vel.push_back((dx/d) * v_desired);
     vel.push_back((dy/d) * v_desired);
     vel.push_back((dz/d) * v_desired);

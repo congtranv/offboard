@@ -1,5 +1,5 @@
-#ifndef OFFB_TRAJECTORY_H_
-#define OFFB_TRAJECTORY_H_
+#ifndef OFFBOARD_H_
+#define OFFBOARD_H_
 
 #include <ros/ros.h>
 #include <mavros_msgs/State.h>

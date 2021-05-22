@@ -108,7 +108,6 @@ int main(int argc, char **argv)
                     local_pose_pub_.publish(target_pose_);
 
                     landing_reached = checkPosition(check_error_, current_pose_, targetTransfer(x_hover, y_hover, 0));
-
                     if(current_state_.system_status == 3)
                     {
                         std::printf("[ INFO] Landing detected\n");

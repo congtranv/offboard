@@ -7,6 +7,7 @@
 #include <std_msgs/Bool.h>
 #include <std_msgs/Float64.h>
 #include <geometry_msgs/PoseStamped.h>
+#include <geometry_msgs/TwistStamped.h>
 #include <geographic_msgs/GeoPoseStamped.h>
 #include <sensor_msgs/NavSatFix.h>
 #include <tf/tf.h>
@@ -35,6 +36,7 @@ const double e_sq = f * (2 - f);    // Square of Eccentricity
 ros::Subscriber state_sub_;
 ros::Subscriber local_pose_sub_;
 ros::Subscriber global_pos_sub_;
+ros::Subscriber velocity_body_sub_;
 
 ros::Publisher local_pose_pub_;
 
@@ -43,6 +45,7 @@ ros::ServiceClient set_mode_client_;
 mavros_msgs::State current_state_;
 geometry_msgs::PoseStamped current_pose_;
 geometry_msgs::PoseStamped target_pose_;
+geometry_msgs::TwistStamped current_vel_;
 sensor_msgs::NavSatFix current_global_;
 geographic_msgs::GeoPoseStamped goal_global_;
 mavros_msgs::SetMode flight_mode_;
@@ -73,6 +76,8 @@ double hover_time_;
 
 sensor_msgs::NavSatFix goalTransfer(double lat, double lon, double alt); // transfer lat, lon, alt setpoint to same message type with global_position
 geometry_msgs::PoseStamped targetTransfer(double x, double y, double z); // transfer x, y, z setpoint to same message type with local_position
+
+double avgBodyVelocity(geometry_msgs::TwistStamped vel);
 
 bool checkPosition(double error, geometry_msgs::PoseStamped current, geometry_msgs::PoseStamped target);
 bool checkOrientation(double error, geometry_msgs::PoseStamped current, geometry_msgs::PoseStamped target);

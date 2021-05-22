@@ -16,6 +16,11 @@ void globalPositionCallback(const sensor_msgs::NavSatFix::ConstPtr& msg)
     global_received_ = true;
 }
 
+void velocityBodyCallback(const geometry_msgs::TwistStamped::ConstPtr& msg)
+{
+    current_vel_ = *msg;
+}
+
 int main(int argc, char **argv)
 {
     ros::init(argc, argv, "offboard_node");
@@ -24,6 +29,7 @@ int main(int argc, char **argv)
     state_sub_ = nh.subscribe<mavros_msgs::State>("/mavros/state", 50, stateCallback);
     local_pose_sub_ = nh.subscribe<geometry_msgs::PoseStamped>("/mavros/local_position/pose", 50, localPoseCallback);
     global_pos_sub_ = nh.subscribe<sensor_msgs::NavSatFix>("/mavros/global_position/global", 50, globalPositionCallback);
+    velocity_body_sub_ = nh.subscribe<geometry_msgs::TwistStamped>("/mavros/local_position/velocity_body", 50, velocityBodyCallback);
 
     local_pose_pub_ = nh.advertise<geometry_msgs::PoseStamped>("/mavros/setpoint_position/local", 100);
     set_mode_client_ = nh.serviceClient<mavros_msgs::SetMode>("/mavros/set_mode");
@@ -37,7 +43,7 @@ int main(int argc, char **argv)
         ros::spinOnce();
         rate.sleep();
     }
-    std::printf("\n[ INFO] FCU connected \n");
+    std::printf("[ INFO] FCU connected \n");
     // wait for GPS information
     while (ros::ok() && !global_received_) 
     {
@@ -45,7 +51,7 @@ int main(int argc, char **argv)
         ros::spinOnce();
         rate.sleep();
     }
-    std::printf("\n[ INFO] GPS position received \n");
+    std::printf("[ INFO] GPS position received \n");
 	
     std::printf("\n[ INFO] How do you want to fly?\n");
     char c;
@@ -64,7 +70,7 @@ int main(int argc, char **argv)
         target_pose_ = targetTransfer(x_hover, y_hover, z_hover);
         // send a few setpoints before starting
         std::printf("[ INFO] Setting OFFBOARD stream \n");
-        for(int i = 100; ros::ok() && i > 0; --i)
+        for(int i = 50; ros::ok() && i > 0; --i)
         {
             target_pose_.header.stamp = ros::Time::now();
             local_pose_pub_.publish(target_pose_);
@@ -191,7 +197,7 @@ int main(int argc, char **argv)
 
         // send a few setpoints before starting
         std::printf("[ INFO] Setting OFFBOARD stream \n");
-        for(int i = 100; ros::ok() && i > 0; --i)
+        for(int i = 50; ros::ok() && i > 0; --i)
         {
             target_pose_.header.stamp = ros::Time::now();
             local_pose_pub_.publish(target_pose_);
@@ -231,12 +237,14 @@ int main(int argc, char **argv)
 
                 std::printf("\nCurrent local position: [%.3f, %.3f, %.3f]\n", current_pose_.pose.position.x, current_pose_.pose.position.y, current_pose_.pose.position.z);
                 std::printf("Target local position: [%.3f, %.3f, %.3f]\n", x_target_[i], y_target_[i], z_target_[i]);
+                std::printf("[ DEBUG] Desired velocity: %.3f(m/s)\n", vel_desired_);
+                std::printf("[ DEBUG] Body velocity: %.3f(m/s)\n", avgBodyVelocity(current_vel_));
 
                 distance_ = distanceMeasure(current_pose_, targetTransfer(x_target_[i], y_target_[i], z_target_[i]));
                 std::printf("Distance to target: %.3f (m) \n", distance_);
 
                 bool target_reached = checkPosition(check_error_, current_pose_, targetTransfer(x_target_[i], y_target_[i], z_target_[i]));
-                std::printf("Target reached: %s\n", target_reached ? "true" : "false");
+                std::printf("[ DEBUG] Target reached: %s\n", target_reached ? "true" : "false");
 
                 if(target_reached && !final_position_)
                 {
@@ -247,7 +255,7 @@ int main(int argc, char **argv)
                     std::printf("- Hovering\n");
                     ros::param::get("hover_time",hover_time_);
                     hoverAt(hover_time_, targetTransfer(x_target_[i], y_target_[i], z_target_[i]), rate);
-                    landingAt(targetTransfer(x_target_[i], y_target_[i], z_target_[i]), rate);
+                    landingAt(targetTransfer(x_target_[i], y_target_[i], z_target_[i]), rate); // comment if don't want to land at each setpoint
                     i+=1;
                 }
                 if(target_reached && final_position_)
@@ -284,12 +292,14 @@ int main(int argc, char **argv)
             
                 std::printf("\nCurrent local position: [%.3f, %.3f, %.3f]\n", current_pose_.pose.position.x, current_pose_.pose.position.y, current_pose_.pose.position.z);
                 std::printf("Target local position: [%.3f, %.3f, %.3f]\n", targetTransfer(goal_enu.x + x_offset_, goal_enu.y + y_offset_, goal_enu.z + z_offset_).pose.position.x, targetTransfer(goal_enu.x + x_offset_, goal_enu.y + y_offset_, goal_enu.z + z_offset_).pose.position.y, targetTransfer(goal_enu.x + x_offset_, goal_enu.y + y_offset_, goal_enu.z + z_offset_).pose.position.z);
+                std::printf("[ DEBUG] Desired velocity: %.3f(m/s)\n", vel_desired_);
+                std::printf("[ DEBUG] Body velocity: %.3f(m/s)\n", avgBodyVelocity(current_vel_));
 
                 distance_ = distanceMeasure(current_pose_, targetTransfer(goal_enu.x + x_offset_, goal_enu.y + y_offset_, goal_enu.z + z_offset_));
                 std::printf("Distance to goal: %.3f (m) \n", distance_);
 
                 bool target_reached = checkPosition(check_error_, current_pose_, targetTransfer(goal_enu.x + x_offset_, goal_enu.y + y_offset_, goal_enu.z + z_offset_));
-                std::printf("Target reached: %s\n", target_reached ? "true" : "false");
+                std::printf("[ DEBUG] Target reached: %s\n", target_reached ? "true" : "false");
 
                 if(target_reached && !final_position_)
                 {
@@ -302,7 +312,7 @@ int main(int argc, char **argv)
                     std::printf("- Hovering\n");
                     ros::param::get("hover_time",hover_time_);
                     hoverAt(hover_time_, targetTransfer(goal_enu.x + x_offset_, goal_enu.y + y_offset_, goal_enu.z + z_offset_), rate);
-                    landingAt(targetTransfer(goal_enu.x + x_offset_, goal_enu.y + y_offset_, goal_enu.z + z_offset_), rate);
+                    landingAt(targetTransfer(goal_enu.x + x_offset_, goal_enu.y + y_offset_, goal_enu.z + z_offset_), rate); // comment if don't want to land at each setpoint
                     i+=1;
                 }
                 if(target_reached && final_position_)

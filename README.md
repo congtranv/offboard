@@ -30,6 +30,11 @@ If you are operating on a real vehicle be sure to have a way of gaining back man
 ***
 
 ## Usage
+***
+*Before run OFFBOARD node, check and modify (if need) the value of parameters in* **config/config.yaml**
+
+*These parameters would be load at first when launch OFFBOARD node*
+***
 
 ### 1. Simulation
 #### 1.1 Run simulation

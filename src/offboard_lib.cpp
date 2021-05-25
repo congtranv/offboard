@@ -131,7 +131,7 @@ void inputTarget()
             {
                 std::printf("- Target (%d): [%.3f, %.3f, %.3f]\n", i+1, x_target_[i], y_target_[i], z_target_[i]);
             }
-            std::printf("- Position error check: %.3f\n", check_error_);
+            std::printf("- Position error check: %.3f (m)\n", check_error_);
         }
         else if(c == '4')
         {
@@ -153,7 +153,7 @@ void inputTarget()
                 alt_goal_[i] += current_global_.altitude;
                 std::printf("- Goal (%d): [%.8f, %.8f, %.3f]\n", i+1, lat_goal_[i], lon_goal_[i], alt_goal_[i]);
             }
-            std::printf("- Position error check: %.3f\n", check_error_);
+            std::printf("- Position error check: %.3f (m)\n", check_error_);
         }
         else inputTarget();
     }
@@ -205,7 +205,7 @@ void inputGlobal()
         std::cin >> lat; lat_goal_.push_back(lat);
         std::printf(" Longitude (%d) (in degree): ", i+1);
         std::cin >> lon; lon_goal_.push_back(lon);
-        std::printf(" Altitude (%d) (in meter.above zero): ", i+1);
+        std::printf(" Altitude (%d) (in meter.above ground): ", i+1);
         std::cin >> alt; alt += current_global_.altitude; 
         alt_goal_.push_back(alt);
     }
@@ -238,30 +238,21 @@ std::vector<double> velLimit(double v_desired, geometry_msgs::PoseStamped curren
     return vel;
 }
 
-void takeOff(ros::Rate rate)
+void takeOff(geometry_msgs::PoseStamped takeoff_pose, ros::Rate rate)
 {
-    geometry_msgs::PoseStamped takeoff_pose;
-    takeoff_pose.pose.position.x = current_pose_.pose.position.x;
-    takeoff_pose.pose.position.y = current_pose_.pose.position.y;
-    ros::param::get("z_takeoff", takeoff_pose.pose.position.z);
-    if(current_state_.armed && (current_state_.mode == "OFFBOARD"))
-    {
-        std::printf("[ INFO] Takeoff to %.3f (m)\n", takeoff_pose.pose.position.z);
-    }
     bool takeoff_reached = false;
     while(ros::ok() && !takeoff_reached)
     {
         takeoff_pose.header.stamp = ros::Time::now();
         local_pose_pub_.publish(takeoff_pose);
 
-        takeoff_reached = checkPosition(check_error_, current_pose_, takeoff_pose);
+        takeoff_reached = checkPosition(0.05, current_pose_, takeoff_pose);
         if(takeoff_reached)
         {
-            std::printf("[ INFO] Hovering at %.3f (m)\n", takeoff_pose.pose.position.z);
-            ros::param::get("hover_time", hover_time_);
+            ros::param::get("takeoff_hover_time", hover_time_);
+            std::printf("[ INFO] Hovering at %.3f (m) in %.3f (s)\n", takeoff_pose.pose.position.z, hover_time_);
+            
             hoverAt(hover_time_, takeoff_pose, rate);
-            std::printf("[ INFO] FLY\n");
-            hoverAt(1, takeoff_pose, rate);
         }
         else
         {
@@ -300,11 +291,12 @@ void landingAt(geometry_msgs::PoseStamped setpoint, ros::Rate rate)
 
         target_pose_.header.stamp = ros::Time::now();
         local_pose_pub_.publish(target_pose_);
-        std::printf("[ DEBUG] Desired velocity: %.3f(m/s)\n", vel_desired_);
-        std::printf("[ DEBUG] Body velocity: %.3f(m/s)\n", avgBodyVelocity(current_vel_));
+        std::printf("[ DEBUG] Desired velocity: %.3f (m/s)\n", vel_desired_);
+        std::printf("[ DEBUG] Body velocity: %.3f (m/s)\n", avgBodyVelocity(current_vel_));
         std::printf("- Descending - %.3f (m)\n", current_pose_.pose.position.z);
 
-        land_reached = checkPosition(check_error_, current_pose_, targetTransfer(setpoint.pose.position.x, setpoint.pose.position.y, 0));
+        ros::param::get("land_error", land_error_);
+        land_reached = checkPosition(land_error_, current_pose_, targetTransfer(setpoint.pose.position.x, setpoint.pose.position.y, 0));
 
         if(land_reached)
         {
@@ -325,8 +317,8 @@ void landingAt(geometry_msgs::PoseStamped setpoint, ros::Rate rate)
 
                 target_pose_.header.stamp = ros::Time::now();
                 local_pose_pub_.publish(target_pose_);
-                std::printf("[ DEBUG] Desired velocity: %.3f(m/s)\n", vel_desired_);
-                std::printf("[ DEBUG] Body velocity: %.3f(m/s)\n", avgBodyVelocity(current_vel_));
+                std::printf("[ DEBUG] Desired velocity: %.3f (m/s)\n", vel_desired_);
+                std::printf("[ DEBUG] Body velocity: %.3f (m/s)\n", avgBodyVelocity(current_vel_));
                 std::printf("- Ascending - %.3f (m)/ %.3f\n", current_pose_.pose.position.z, setpoint.pose.position.z);
                 return_reached = checkPosition(check_error_, current_pose_, setpoint);
                 if(return_reached)
@@ -365,11 +357,12 @@ void landingAtFinal(geometry_msgs::PoseStamped setpoint, ros::Rate rate)
 
         target_pose_.header.stamp = ros::Time::now();
         local_pose_pub_.publish(target_pose_);
-        std::printf("[ DEBUG] Desired velocity: %.3f(m/s)\n", vel_desired_);
-        std::printf("[ DEBUG] Body velocity: %.3f(m/s)\n", avgBodyVelocity(current_vel_));
+        std::printf("[ DEBUG] Desired velocity: %.3f (m/s)\n", vel_desired_);
+        std::printf("[ DEBUG] Body velocity: %.3f (m/s)\n", avgBodyVelocity(current_vel_));
         std::printf("- Descending - %.3f (m)\n", current_pose_.pose.position.z);
 
-        land_reached = checkPosition(check_error_, current_pose_, targetTransfer(setpoint.pose.position.x, setpoint.pose.position.y, 0));
+        ros::param::get("land_error", land_error_);
+        land_reached = checkPosition(land_error_, current_pose_, targetTransfer(setpoint.pose.position.x, setpoint.pose.position.y, 0));
 
         if(current_state_.system_status == 3)
         {

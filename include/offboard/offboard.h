@@ -64,9 +64,10 @@ std::vector<double> alt_goal_;
 bool final_position_ = false; // true = reach final setpoint || false = other setpoints
 
 bool input_type_ = true; //true = local input || false = global input
-double check_error_, distance_;
+double check_error_, land_error_, distance_;
 double x_off_[100], y_off_[100], z_off_[100];
 double x_offset_, y_offset_, z_offset_;
+double z_takeoff_;
 
 double vel_desired_;
 std::vector<double> vel_;
@@ -87,7 +88,7 @@ void inputLocal();
 void inputGlobal();
 
 std::vector<double> velLimit(double v_desired, geometry_msgs::PoseStamped current, geometry_msgs::PoseStamped target);
-void takeOff(ros::Rate rate);
+void takeOff(geometry_msgs::PoseStamped takeoff_pose, ros::Rate rate);
 void hoverAt(double hover_time, geometry_msgs::PoseStamped target, ros::Rate rate);
 void landingAt(geometry_msgs::PoseStamped setpoint, ros::Rate rate);
 void landingAtFinal(geometry_msgs::PoseStamped setpoint, ros::Rate rate);

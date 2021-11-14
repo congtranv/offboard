@@ -89,8 +89,8 @@ void inputTarget()
     if(c == '1')
     {
         std::printf("[ INFO] Choose the setpoint type\n");
-        std::printf("- 3 for Local position target\n");
-        std::printf("- 4 for Global goal position\n");
+        std::printf("- 3 for Local position\n");
+        std::printf("- 4 for Global position\n");
         std::printf("(3/4): ");
         std::cin >> c;
         if(c == '3')
@@ -108,8 +108,8 @@ void inputTarget()
     else if(c == '2')
     {
         std::printf("[ INFO] Choose the setpoint type\n");
-        std::printf("- 3 for Local position target\n");
-        std::printf("- 4 for Global goal position\n");
+        std::printf("- 3 for Local position\n");
+        std::printf("- 4 for Global position\n");
         std::printf("(3/4): ");
         std::cin >> c;
         if(c == '3')

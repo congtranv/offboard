@@ -82,8 +82,8 @@ void inputTarget()
 {
     char c;
     std::printf("[ INFO] How do you want to input target/goal?\n");
-    std::printf("- Choose 1 for Manual Input from keyboard\n");
-    std::printf("- Choose 2 to Load prepared parameters from configure file\n");
+    std::printf("- Choose 1: Manual Input from keyboard\n");
+    std::printf("- Choose 2: Load prepared parameters from launch file\n");
     std::printf("(1/2): ");
     std::cin >> c;
     if(c == '1')
@@ -115,45 +115,47 @@ void inputTarget()
         if(c == '3')
         {
             input_type_ = true;
-            if(!x_target_.empty() || !y_target_.empty() || !z_target_.empty())
-            {
-                x_target_.clear();
-                y_target_.clear();
-                z_target_.clear();
-            }
-            ros::param::get("number_of_target", target_num_);
-            ros::param::get("x_pos", x_target_);
-            ros::param::get("y_pos", y_target_);
-            ros::param::get("z_pos", z_target_);
-            ros::param::get("target_error", check_error_);
+            // if(!x_target_.empty() || !y_target_.empty() || !z_target_.empty())
+            // {
+            //     x_target_.clear();
+            //     y_target_.clear();
+            //     z_target_.clear();
+            // }
+            // ros::param::get("number_of_target", target_num_);
+            // ros::param::get("x_pos", x_target_);
+            // ros::param::get("y_pos", y_target_);
+            // ros::param::get("z_pos", z_target_);
+            // ros::param::get("target_error", check_error_);
             std::printf("[ INFO] Loaded parameters\n");
             for(int i = 0; i < target_num_; i++)
             {
-                std::printf("- Target (%d): [%.3f, %.3f, %.3f]\n", i+1, x_target_[i], y_target_[i], z_target_[i]);
+                std::printf("- Target (%d): [%.1f, %.1f, %.1f]\n", i+1, x_target_[i], y_target_[i], z_target_[i]);
             }
-            std::printf("- Position error check: %.3f (m)\n", check_error_);
+            check_error_ = target_error_;
+            std::printf("- Position error check: %.1f (m)\n", check_error_);
         }
         else if(c == '4')
         {
             input_type_ = false;
-            if(!lat_goal_.empty() || !lon_goal_.empty() || !alt_goal_.empty())
-            {
-                lat_goal_.clear();
-                lon_goal_.clear();
-                alt_goal_.clear();
-            }
-            ros::param::get("number_of_goal", goal_num_);
-            ros::param::get("latitude", lat_goal_);
-            ros::param::get("longitude", lon_goal_);
-            ros::param::get("altitude", alt_goal_);
-            ros::param::get("goal_error", check_error_);
+            // if(!lat_goal_.empty() || !lon_goal_.empty() || !alt_goal_.empty())
+            // {
+            //     lat_goal_.clear();
+            //     lon_goal_.clear();
+            //     alt_goal_.clear();
+            // }
+            // ros::param::get("number_of_goal", goal_num_);
+            // ros::param::get("latitude", lat_goal_);
+            // ros::param::get("longitude", lon_goal_);
+            // ros::param::get("altitude", alt_goal_);
+            // ros::param::get("goal_error", check_error_);
             std::printf("[ INFO] Loaded parameters\n");
             for(int i = 0; i < goal_num_; i++)
             {
                 alt_goal_[i] += current_global_.altitude;
                 std::printf("- Goal (%d): [%.8f, %.8f, %.3f]\n", i+1, lat_goal_[i], lon_goal_[i], alt_goal_[i]);
             }
-            std::printf("- Position error check: %.3f (m)\n", check_error_);
+            check_error_ = goal_error_;
+            std::printf("- Position error check: %.1f (m)\n", check_error_);
         }
         else inputTarget();
     }
@@ -164,7 +166,7 @@ void inputLocal()
 {
     double x, y, z;
     std::printf("[ INFO] Input Local target position(s)\n");
-    std::printf("- Number of target(s): "); 
+    std::printf(" Number of target(s): "); 
     std::cin >> target_num_;
     if(!x_target_.empty() || !y_target_.empty() || !z_target_.empty())
     {
@@ -174,23 +176,23 @@ void inputLocal()
     }
     for(int i = 0; i < target_num_; i++)
     {
-        std::printf("- Target (%d) postion (in meter):\n", i+1);
-        std::printf(" x(%d): ", i+1);
+        std::printf(" Target (%d) postion (in meter):\n", i+1);
+        std::printf("   x(%d): ", i+1);
         std::cin >> x; x_target_.push_back(x);
-        std::printf(" y(%d): ", i+1);
+        std::printf("   y(%d): ", i+1);
         std::cin >> y; y_target_.push_back(y);
-        std::printf(" z(%d): ", i+1);
+        std::printf("   z(%d): ", i+1);
         std::cin >> z; z_target_.push_back(z);
     }
-    std::printf("- Position error check value (in meter): ");
-    std::cin >> check_error_;
+    std::printf(" Position error check value (in meter): ");
+    std::cin >> target_error_;
 }
 
 void inputGlobal()
 {
     double lat, lon, alt;
     std::printf("[ INFO] Input Global goal position(s)\n");
-    std::printf("- Number of goal(s): "); 
+    std::printf("  Number of goal(s): "); 
     std::cin >> goal_num_;
     if(!lat_goal_.empty() || !lon_goal_.empty() || !alt_goal_.empty())
     {
@@ -200,17 +202,17 @@ void inputGlobal()
     }
     for(int i = 0; i < goal_num_; i++)
     {
-        std::printf("- Goal (%d) postion:\n", i+1);
-        std::printf(" Latitude (%d) (in degree): ", i+1);
+        std::printf("  Goal (%d) postion:\n", i+1);
+        std::printf("    Latitude (%d) (in degree): ", i+1);
         std::cin >> lat; lat_goal_.push_back(lat);
-        std::printf(" Longitude (%d) (in degree): ", i+1);
+        std::printf("    Longitude (%d) (in degree): ", i+1);
         std::cin >> lon; lon_goal_.push_back(lon);
-        std::printf(" Altitude (%d) (in meter.above ground): ", i+1);
+        std::printf("    Altitude (%d) (in meter.above ground): ", i+1);
         std::cin >> alt; alt += current_global_.altitude; 
         alt_goal_.push_back(alt);
     }
-    std::printf("- Position error check value (in meter): ");
-    std::cin >> check_error_;
+    std::printf("  Position error check value (in meter): ");
+    std::cin >> goal_error_;
 }
 
 std::vector<double> velLimit(double v_desired, geometry_msgs::PoseStamped current, geometry_msgs::PoseStamped target)
@@ -249,8 +251,9 @@ void takeOff(geometry_msgs::PoseStamped takeoff_pose, ros::Rate rate)
         takeoff_reached = checkPosition(0.05, current_pose_, takeoff_pose);
         if(takeoff_reached)
         {
-            ros::param::get("takeoff_hover_time", hover_time_);
-            std::printf("[ INFO] Hovering at %.3f (m) in %.3f (s)\n", takeoff_pose.pose.position.z, hover_time_);
+            // ros::param::get("takeoff_hover_time", hover_time_);
+            hover_time_ = takeoff_time_;
+            std::printf("[ INFO] Hovering at %.1f (m) in %.1f (s)\n", takeoff_pose.pose.position.z, hover_time_);
             
             hoverAt(hover_time_, takeoff_pose, rate);
         }
@@ -282,8 +285,8 @@ void landingAt(geometry_msgs::PoseStamped setpoint, ros::Rate rate)
     std::printf("[ INFO] Ready to Land\n");
     while(ros::ok() && !land_reached)
     {
-        ros::param::get("land_velocity", vel_desired_);
-        vel_ = velLimit(vel_desired_, current_pose_, targetTransfer(setpoint.pose.position.x, setpoint.pose.position.y, 0));
+        // ros::param::get("land_velocity", vel_desired_);
+        vel_ = velLimit(land_vel_, current_pose_, targetTransfer(setpoint.pose.position.x, setpoint.pose.position.y, 0));
 
         target_pose_.pose.position.x = current_pose_.pose.position.x + vel_[0];
         target_pose_.pose.position.y = current_pose_.pose.position.y + vel_[1];
@@ -291,25 +294,41 @@ void landingAt(geometry_msgs::PoseStamped setpoint, ros::Rate rate)
 
         target_pose_.header.stamp = ros::Time::now();
         local_pose_pub_.publish(target_pose_);
-        std::printf("[ DEBUG] Desired velocity: %.3f (m/s)\n", vel_desired_);
-        std::printf("[ DEBUG] Body velocity: %.3f (m/s)\n", avgBodyVelocity(current_vel_));
-        std::printf("- Descending - %.3f (m)\n", current_pose_.pose.position.z);
-
-        ros::param::get("land_error", land_error_);
-        land_reached = checkPosition(land_error_, current_pose_, targetTransfer(setpoint.pose.position.x, setpoint.pose.position.y, 0));
+        // std::printf("[ DEBUG] Desired velocity: %.3f (m/s)\n", vel_desired_);
+        // std::printf("[ DEBUG] Body velocity: %.3f (m/s)\n", avgBodyVelocity(current_vel_));
+        std::printf("   Descending - %.1f (m)\n", current_pose_.pose.position.z);
+        if(current_state_.system_status == 3)
+        {
+            land_reached = true;
+        }
+        else
+        {
+            // ros::param::get("land_error", land_error_);
+            land_reached = checkPosition(land_error_, current_pose_, targetTransfer(setpoint.pose.position.x, setpoint.pose.position.y, 0));
+        }
 
         if(land_reached)
         {
             std::printf("\n[ INFO] Unpacking\n");
-            ros::param::get("unpack_time", hover_time_);
-            hoverAt(hover_time_, targetTransfer(setpoint.pose.position.x, setpoint.pose.position.y, 0), rate);
-            std::printf("[ INFO] Done - Return setpoint [%.3f, %.3f, %.3f]\n", setpoint.pose.position.x, setpoint.pose.position.y, setpoint.pose.position.z);
+            if(current_state_.system_status == 3)
+            {
+                hover_time_ = unpack_time_;
+                hoverAt(hover_time_, targetTransfer(setpoint.pose.position.x, setpoint.pose.position.y, current_pose_.pose.position.z), rate);
+            }
+            else
+            {
+                // ros::param::get("unpack_time", hover_time_);
+                hover_time_ = unpack_time_;
+                hoverAt(hover_time_, targetTransfer(setpoint.pose.position.x, setpoint.pose.position.y, 0.5), rate);
+            }
+            
+            std::printf("[ INFO] Done - Return setpoint [%.1f, %.1f, %.1f]\n", setpoint.pose.position.x, setpoint.pose.position.y, setpoint.pose.position.z);
 
             bool return_reached = false;
             while(ros::ok() && !return_reached)
             {
-                ros::param::get("return_velocity", vel_desired_);
-                vel_ = velLimit(vel_desired_, current_pose_, setpoint);
+                // ros::param::get("return_velocity", vel_desired_);
+                vel_ = velLimit(return_vel_, current_pose_, setpoint);
 
                 target_pose_.pose.position.x = current_pose_.pose.position.x + vel_[0];
                 target_pose_.pose.position.y = current_pose_.pose.position.y + vel_[1];
@@ -317,14 +336,15 @@ void landingAt(geometry_msgs::PoseStamped setpoint, ros::Rate rate)
 
                 target_pose_.header.stamp = ros::Time::now();
                 local_pose_pub_.publish(target_pose_);
-                std::printf("[ DEBUG] Desired velocity: %.3f (m/s)\n", vel_desired_);
-                std::printf("[ DEBUG] Body velocity: %.3f (m/s)\n", avgBodyVelocity(current_vel_));
-                std::printf("- Ascending - %.3f (m)/ %.3f\n", current_pose_.pose.position.z, setpoint.pose.position.z);
-                return_reached = checkPosition(check_error_, current_pose_, setpoint);
+                // std::printf("[ DEBUG] Desired velocity: %.3f (m/s)\n", vel_desired_);
+                // std::printf("[ DEBUG] Body velocity: %.3f (m/s)\n", avgBodyVelocity(current_vel_));
+                std::printf("   Ascending - %.1f (m)/ %.1f\n", current_pose_.pose.position.z, setpoint.pose.position.z);
+                return_reached = checkPosition(0.2, current_pose_, setpoint);
                 if(return_reached)
                 {
-                    std::printf("\n[ INFO] Hover at setpoint [%.3f, %.3f, %.3f]\n", setpoint.pose.position.x, setpoint.pose.position.y, setpoint.pose.position.z);
-                    ros::param::get("hover_time", hover_time_);
+                    std::printf("\n[ INFO] Hover at setpoint [%.1f, %.1f, %.1f]\n", setpoint.pose.position.x, setpoint.pose.position.y, setpoint.pose.position.z);
+                    // ros::param::get("hover_time", hover_time_);
+                    hover_time_ = hover_;
                     hoverAt(hover_time_, setpoint, rate);
                 }
                 else
@@ -348,8 +368,8 @@ void landingAtFinal(geometry_msgs::PoseStamped setpoint, ros::Rate rate)
     std::printf("[ INFO] Ready to Land\n");
     while(ros::ok() && !land_reached)
     {
-        ros::param::get("land_velocity", vel_desired_);
-        vel_ = velLimit(vel_desired_, current_pose_, targetTransfer(setpoint.pose.position.x, setpoint.pose.position.y, 0));
+        // ros::param::get("land_velocity", vel_desired_);
+        vel_ = velLimit(land_vel_, current_pose_, targetTransfer(setpoint.pose.position.x, setpoint.pose.position.y, 0));
 
         target_pose_.pose.position.x = current_pose_.pose.position.x + vel_[0];
         target_pose_.pose.position.y = current_pose_.pose.position.y + vel_[1];
@@ -357,11 +377,11 @@ void landingAtFinal(geometry_msgs::PoseStamped setpoint, ros::Rate rate)
 
         target_pose_.header.stamp = ros::Time::now();
         local_pose_pub_.publish(target_pose_);
-        std::printf("[ DEBUG] Desired velocity: %.3f (m/s)\n", vel_desired_);
-        std::printf("[ DEBUG] Body velocity: %.3f (m/s)\n", avgBodyVelocity(current_vel_));
-        std::printf("- Descending - %.3f (m)\n", current_pose_.pose.position.z);
+        // std::printf("[ DEBUG] Desired velocity: %.3f (m/s)\n", vel_desired_);
+        // std::printf("[ DEBUG] Body velocity: %.3f (m/s)\n", avgBodyVelocity(current_vel_));
+        std::printf("   Descending - %.1f (m)\n", current_pose_.pose.position.z);
 
-        ros::param::get("land_error", land_error_);
+        // ros::param::get("land_error", land_error_);
         land_reached = checkPosition(land_error_, current_pose_, targetTransfer(setpoint.pose.position.x, setpoint.pose.position.y, 0));
 
         if(current_state_.system_status == 3)
@@ -378,7 +398,7 @@ void landingAtFinal(geometry_msgs::PoseStamped setpoint, ros::Rate rate)
             flight_mode_.request.custom_mode = "AUTO.LAND";
             if(set_mode_client_.call(flight_mode_) && flight_mode_.response.mode_sent)
             {
-                std::printf("\n[ INFO] LAND\n");
+                std::printf("\n[ INFO] LANDED\n");
             }
         }
         else

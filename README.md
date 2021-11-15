@@ -1,82 +1,69 @@
 # IVSR OFFBOARD package
 
 ***
-**WARNING**
+## <span style="color:red">!!! WARNING
 
-*OFFBOARD* control is dangerous. 
+<span style="color:yellow">__*OFFBOARD* control is dangerous.__
 
-If you are operating on a real vehicle be sure to have a way of gaining back manual control in case something goes wrong.
+<span style="color:yellow">**If you are operating on a real vehicle be sure to have a way of gaining back manual control in case something goes wrong.**
 ***
 
 ## Contain
-- *include/offboard/offboard.h* : header offboard
+- <span style="color:orange">*include/offboard/offboard.h*</span> : header offboard
 
-- *src/offboard_node.cpp*   : offboard node
-- *src/offboard_lib.cpp*    : library for offboard node
-- *src/setmode_offb.cpp*    : set OFFBOARD mode and ARM vehicle in simulation
-
-- *config/config.yaml*      : prepared params to load into offboard node
-
-- *launch/offboard.launch*  : launch file
+- <span style="color:orange">*src/offboard_node.cpp*</span>   : offboard node source code
+- <span style="color:orange">*src/offboard_lib.cpp*</span>    : library for offboard node
+- <span style="color:orange">*src/setmode_offb.cpp*</span>    : set OFFBOARD mode and ARM vehicle in simulation
+- <span style="color:orange">*launch/offboard.launch*</span>  : launch file, include parameter
 
 ## Required
-- **ROS**             : tested on Melodic (Ubuntu 18.04)
-- **PX4 Firmware**    : tested on v10.0.1 - setup [here](https://github.com/congtranv/Firmware)
-- **Catkin workspace**: `catkin_ws`
-- **MAVROS**          : binary installation - setup [here](https://docs.px4.io/master/en/ros/mavros_installation.html#binary-installation-debian-ubuntu)
+- <span style="color:orange">**ROS**</span>             : tested on ROS Melodic (Ubuntu 18.04)
+- <span style="color:orange">**PX4 Firmware**</span>    : tested on v10.0.1 - setup [here](https://github.com/congtranv/px4_install)
+- <span style="color:orange">**Catkin workspace**</span>: `catkin_ws`
+  ```
+  ## create a workspace if you've not had one
+  mkdir -p [path/to/ws]/catkin_ws/src
+  cd [path/to/ws]/catkin_ws
+  catkin_init_workspace
+  rosdep install --from-paths src --ignore-src -y 
+  catkin build
+  ```
+- <span style="color:orange">**MAVROS**</span>          : binary installation - setup [here](https://docs.px4.io/master/en/ros/mavros_installation.html#binary-installation-debian-ubuntu)
 
-***
-- **git clone `offboard` to `catkin_ws/src/` and build `catkin build`**
-***
+- <span style="color:orange">**OFFBOARD**</span>
+  ```
+  cd [path/to/ws]/catkin_ws/src
+  git clone https://github.com/congtranv/offboard.git
+  cd [path/to/ws]/catkin_ws
+  catkin build offboard
+  ```
 
 ## Usage
 ***
-*Before run OFFBOARD node, check and modify (if need) the value of parameters in* **config/config.yaml**
-
-*These parameters would be load at first when launch OFFBOARD node*
+### <span style="color:green">*Before run OFFBOARD node, check and modify (if need) the value of parameters in* **launch/offboard.launch**
 ***
+### There 2 main functions:
+- <span style="color:violet">HOVERING</span>: drone hover at `z` meters (input from keyboard) in `hover_time` seconds (change in launch/offboard.launch)
+- <span style="color:violet">MISSION</span>: fly with the local/GPS setpoints that prepared in launch/offboard.launch or input from keyboard
+### <span style="color:green">Refer the [test_case.md](https://github.com/congtranv/offboard/blob/master/test_case.md) for all detail use cases of OFFBOARD node
 
-### 1. Simulation
-#### 1.1 Run simulation
-- run command:
+### <span style="color:yellow">1. Simulation
+#### <span style="color:cyan">1.1 Run PX4 simulation
 ```
 roslaunch px4 mavros_posix_sitl.launch
 ```
-- or run script at [here](https://github.com/congtranv/bash):
+#### <span style="color:cyan">1.2 Run OFFBOARD node
 ```
-sh px4simulation.sh
+roslaunch offboard offboard.launch simulation:=true
 ```
-
-#### 1.2 Run OFFBOARD node
-```
-roslaunch offboard offboard.launch
-```
-There 2 functions:
-- HOVERING: drone hover at `z` meters (input from keyboard) in `hover_time` seconds (change in config/config.yaml)
-- OFFBOARD: fly with the local/global setpoints that prepared in config/config.yaml or input from keyboard
-
-#### 1.3 ARM and switch to OFFBOARD mode
-```
-rosrun offboard setmode_offb
-```
-### 2. Practice
-#### 2.1 Connect Companion PC to Pixhawk 4 
-- run command:
+### <span style="color:yellow">2. Practice
+#### <span style="color:cyan">2.1 Connect Companion PC to Pixhawk 4 
 ```
 roslaunch mavros px4.launch fcu_url:=/dev/ttyTHS1:921600
 ```
-- or run script:
-```
-sh connect_px4.sh
-```
-
-#### 2.2 Run OFFBOARD node
+#### <span style="color:cyan">2.2 Run OFFBOARD node
 ```
 roslaunch offboard offboard.launch
 ```
-There 2 functions:
-- HOVERING: drone hover at `z` meters (input from keyboard) in `hover_time` seconds (change in config/config.yaml)
-- OFFBOARD: fly with the local/global setpoints that prepared in config/config.yaml or input from keyboard
-
-#### 2.3 ARM and switch to OFFBOARD mode
+#### <span style="color:cyan">2.3 ARM and switch to OFFBOARD mode
 Use Remote controller to ARM and switch flight mode to OFFBOARD

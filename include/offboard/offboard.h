@@ -2,16 +2,19 @@
 #define OFFBOARD_H_
 
 #include <ros/ros.h>
+#include <tf/tf.h>
+#include <tf/transform_datatypes.h>
+
 #include <mavros_msgs/State.h>
 #include <mavros_msgs/SetMode.h>
+#include <mavros_msgs/CommandBool.h>
 #include <std_msgs/Bool.h>
 #include <std_msgs/Float64.h>
 #include <geometry_msgs/PoseStamped.h>
 #include <geometry_msgs/TwistStamped.h>
 #include <geographic_msgs/GeoPoseStamped.h>
 #include <sensor_msgs/NavSatFix.h>
-#include <tf/tf.h>
-#include <tf/transform_datatypes.h>
+
 #include <iostream>
 #include <cmath>
 #include <cstdio>
@@ -31,7 +34,7 @@ const double a_sq = a * a;
 const double b_sq = b * b;
 const double e_sq = f * (2 - f);    // Square of Eccentricity
 
-/* VARIABLE DECLARE */
+/* VARIABLE */
 
 ros::Subscriber state_sub_;
 ros::Subscriber local_pose_sub_;
@@ -64,14 +67,16 @@ std::vector<double> alt_goal_;
 bool final_position_ = false; // true = reach final setpoint || false = other setpoints
 
 bool input_type_ = true; //true = local input || false = global input
-double check_error_, land_error_, distance_;
+double check_error_, target_error_, goal_error_, land_error_, distance_;
 double x_off_[100], y_off_[100], z_off_[100];
 double x_offset_, y_offset_, z_offset_;
 double z_takeoff_;
 
-double vel_desired_;
+double vel_desired_, land_vel_, return_vel_;
 std::vector<double> vel_;
-double hover_time_;
+double hover_time_, hover_, takeoff_time_, unpack_time_;
+bool delivery_ = false;
+bool simulation_ = false;
 
 /* FUNCTION DECLARE */
 

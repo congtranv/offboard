@@ -47,6 +47,7 @@ ros::ServiceClient set_mode_client_;
 
 mavros_msgs::State current_state_;
 geometry_msgs::PoseStamped current_pose_;
+geometry_msgs::PoseStamped home_pose_;
 geometry_msgs::PoseStamped target_pose_;
 geometry_msgs::TwistStamped current_vel_;
 sensor_msgs::NavSatFix current_global_;
@@ -77,6 +78,7 @@ std::vector<double> vel_;
 double hover_time_, hover_, takeoff_time_, unpack_time_;
 bool delivery_ = false;
 bool simulation_ = false;
+bool return_home_ = true;
 
 /* FUNCTION DECLARE */
 
@@ -98,6 +100,7 @@ void hoverAt(double hover_time, geometry_msgs::PoseStamped target, ros::Rate rat
 void landingAt(geometry_msgs::PoseStamped setpoint, ros::Rate rate);
 void landingAtFinal(geometry_msgs::PoseStamped setpoint, ros::Rate rate);
 void landingWithMarker(geometry_msgs::PoseStamped setpoint, ros::Rate rate);
+void returnHome(geometry_msgs::PoseStamped home, ros::Rate rate);
 
 double distanceMeasure(geometry_msgs::PoseStamped current, geometry_msgs::PoseStamped target);
 inline double degreeOf(double rad);

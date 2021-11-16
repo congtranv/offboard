@@ -1,11 +1,14 @@
 <launch>
     <arg name="delivery" default="false"/>
     <arg name="simulation" default="false"/>
+    <arg name="return_home" default="false"/>
   
     <!-- <rosparam command="load" file="$(find offboard)/config/config.yaml" /> -->
     <node name="offboard_node" pkg="offboard" type="offboard_node" output="screen">
         <param name="delivery" type="bool" value="$(arg delivery)"/>
         <param name="simulation" type="bool" value="$(arg simulation)"/>
+        <param name="return_home" type="bool" value="$(arg return_home)"/>
+        
         <param name="number_of_target" type="int" value="4"/>
         <param name="target_error" type="double" value="0.1"/>
         <rosparam param="x_pos">[0.0, 6.0, 6.0, 0.0]</rosparam>

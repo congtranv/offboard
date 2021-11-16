@@ -286,7 +286,7 @@ void landingAt(geometry_msgs::PoseStamped setpoint, ros::Rate rate)
     while(ros::ok() && !land_reached)
     {
         // ros::param::get("land_velocity", vel_desired_);
-        vel_ = velLimit(land_vel_, current_pose_, targetTransfer(setpoint.pose.position.x, setpoint.pose.position.y, 0));
+        vel_ = velLimit(land_vel_, current_pose_, targetTransfer(setpoint.pose.position.x, setpoint.pose.position.y, 0.5));
 
         target_pose_.pose.position.x = current_pose_.pose.position.x + vel_[0];
         target_pose_.pose.position.y = current_pose_.pose.position.y + vel_[1];
@@ -304,7 +304,7 @@ void landingAt(geometry_msgs::PoseStamped setpoint, ros::Rate rate)
         else
         {
             // ros::param::get("land_error", land_error_);
-            land_reached = checkPosition(land_error_, current_pose_, targetTransfer(setpoint.pose.position.x, setpoint.pose.position.y, 0));
+            land_reached = checkPosition(land_error_, current_pose_, targetTransfer(setpoint.pose.position.x, setpoint.pose.position.y, 0.5));
         }
 
         if(land_reached)
@@ -400,6 +400,31 @@ void landingAtFinal(geometry_msgs::PoseStamped setpoint, ros::Rate rate)
             {
                 std::printf("\n[ INFO] LANDED\n");
             }
+        }
+        else
+        {
+            ros::spinOnce();
+            rate.sleep();
+        }
+    }
+}
+
+void returnHome(geometry_msgs::PoseStamped home, ros::Rate rate)
+{
+    bool home_reached = false;
+    while(ros::ok() && !home_reached)
+    {
+        home_pose_.header.stamp = ros::Time::now();
+        local_pose_pub_.publish(home_pose_);
+
+        home_reached = checkPosition(0.05, current_pose_, home_pose_);
+        if(home_reached)
+        {
+            hover_time_ = hover_;
+            std::printf("[ INFO] Hovering at %.1f (m) in %.1f (s)\n", home_pose_.pose.position.z, hover_time_);
+            
+            hoverAt(hover_time_, home_pose_, rate);
+            landingAtFinal(home_pose_, rate);
         }
         else
         {

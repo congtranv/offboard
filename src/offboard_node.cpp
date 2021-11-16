@@ -39,6 +39,7 @@ int main(int argc, char **argv)
 
     nh.param<bool>("/offboard_node/delivery", delivery_, delivery_);
     nh.param<bool>("/offboard_node/simulation", simulation_, simulation_);
+    nh.param<bool>("/offboard_node/return_home", return_home_, return_home_);
     nh.getParam("/offboard_node/number_of_target", target_num_);
     nh.getParam("/offboard_node/target_error", target_error_);
     nh.getParam("/offboard_node/x_pos", x_target_);
@@ -181,25 +182,13 @@ int main(int argc, char **argv)
     else if(c == '2') // Fly with setpoints
     {
         std::printf("\n[ INFO] Mode 2: Fly with mission\n");
-        if(delivery_)
-        {
-            std::printf("[ INFO] Parameter 'delivery' is set true\n");
-            std::printf("        Drone will land at each setpoint\n");
-            std::printf("        If want drone to hover and not land, relaunch offboard node\n");
-            std::printf("        > roslaunch offboard offboard.launch delivery:=false\n");
-        }
-        else
-        {
-            std::printf("[ INFO] Parameter 'delivery' is set false or not set (default = false)\n");
-            std::printf("        Drone will hover at each setpoint and land at final setpoint\n");
-            std::printf("        If want drone to land at each setpoint, relaunch offboard node\n");
-            std::printf("        > roslaunch offboard offboard.launch delivery:=true\n");
-        }
+        std::printf("\n[ INFO] Parameter 'return_home' is set %s\n", return_home_ ? "true":"false");
+        std::printf("[ INFO] Parameter 'delivery' is set %s\n", delivery_ ? "true":"false");
         
         std::printf("\n[ INFO] Waiting for stable state\n");
         ros::Time t_check;
         t_check = ros::Time::now();
-        while (ros::ok() && (ros::Time::now() - t_check) < ros::Duration(20))
+        while (ros::ok() && (ros::Time::now() - t_check) < ros::Duration(15))
         {
             ros::spinOnce();
             rate.sleep();
@@ -228,11 +217,17 @@ int main(int argc, char **argv)
             y_offset_ = y_offset_ + y_off_[i]/100;
             z_offset_ = z_offset_ + z_off_[i]/100;
         }
-        std::printf("\n[ INFO] Get a stable state\n");
-
+        std::printf("[ INFO] Get a stable state\n");
+        std::printf("\n");
+        home_pose_ = current_pose_;
+        std::printf("\n[ INFO] Got HOME position: [%.1f, %.1f, %.1f]\n", home_pose_.pose.position.x, home_pose_.pose.position.y, home_pose_.pose.position.z);
+        std::printf("        latitude : %.8f\n", current_global_.latitude);
+        std::printf("        longitude: %.8f\n", current_global_.longitude);
+        std::printf("        altitude : %.8f\n", current_global_.altitude);
+        std::printf("\n");
         // print information
-        std::printf("\n[ INFO] Local position: [%.3f, %.3f, %.3f]\n", current_pose_.pose.position.x, current_pose_.pose.position.y, current_pose_.pose.position.z);
-        std::printf("[ INFO] GPS position: [%.8f, %.8f, %.3f]\n", current_global_.latitude, current_global_.longitude, current_global_.altitude);
+        std::printf("\n[ INFO] Current Local position: [%.3f, %.3f, %.3f]\n", current_pose_.pose.position.x, current_pose_.pose.position.y, current_pose_.pose.position.z);
+        std::printf("[ INFO] Current GPS position: [%.8f, %.8f, %.3f]\n", current_global_.latitude, current_global_.longitude, current_global_.altitude);
         // std::printf("\n[ DEBUG] global reference: %.8f, %.8f, %.3f\n", global_ref_.latitude, global_ref_.longitude, global_ref_.altitude);
         // std::printf("[ DEBUG] offset: %.3f, %.3f, %.3f\n\n", x_offset_, y_offset_, z_offset_);
         
@@ -376,11 +371,30 @@ int main(int argc, char **argv)
                     // print information
                     std::printf("\n[ INFO] Reached FINAL position: [%.1f, %.1f, %.1f]\n", current_pose_.pose.position.x, current_pose_.pose.position.y, current_pose_.pose.position.z);
                     
-                    // ros::param::get("hover_time",hover_time_);
-                    hover_time_ = hover_;
-                    std::printf("- Hovering in %.1f (s) before land\n", hover_time_);
-                    hoverAt(hover_time_, targetTransfer(x_target_[target_num_-1], y_target_[target_num_-1], z_target_[target_num_-1]), rate); // hover at setpoint in hover_time_ second(s)
-                    landingAtFinal(targetTransfer(x_target_[target_num_-1], y_target_[target_num_-1], z_target_[target_num_-1]), rate);
+                    if(!return_home_)
+                    {
+                        // ros::param::get("hover_time",hover_time_);
+                        hover_time_ = hover_;
+                        std::printf("- Hovering in %.1f (s) before land\n", hover_time_);
+                        hoverAt(hover_time_, targetTransfer(x_target_[target_num_-1], y_target_[target_num_-1], z_target_[target_num_-1]), rate); // hover at setpoint in hover_time_ second(s)
+                        landingAtFinal(targetTransfer(x_target_[target_num_-1], y_target_[target_num_-1], z_target_[target_num_-1]), rate);
+                    }
+                    else
+                    {
+                        if(delivery_)
+                        {
+                            hoverAt(hover_time_, targetTransfer(x_target_[target_num_-1], y_target_[target_num_-1], z_target_[target_num_-1]), rate); // hover at setpoint in hover_time_ second(s)
+                            landingAt(targetTransfer(x_target_[target_num_-1], y_target_[target_num_-1], z_target_[target_num_-1]), rate); // land at each setpoint to unpack - comment if don't want to land at each setpoint
+                        }
+                        else
+                        {
+                            hoverAt(hover_time_, targetTransfer(x_target_[target_num_-1], y_target_[target_num_-1], z_target_[target_num_-1]), rate); // hover at setpoint in hover_time_ second(s)
+                        }
+                        home_pose_.pose.position.z = z_target_[target_num_-1];
+                        std::printf("\n[ INFO] Returning home\n");
+                        returnHome(home_pose_, rate);
+                    }
+                    
                     break;
                 }
             }
@@ -453,11 +467,30 @@ int main(int argc, char **argv)
                     // print information
                     std::printf("\n[ INFO] Reached FINAL position: [%.8f, %.8f, %.3f]\n", current_global_.latitude, current_global_.longitude, current_global_.altitude);
 
-                    // ros::param::get("hover_time",hover_time_);
-                    hover_time_ = hover_;
-                    std::printf("- Hovering in %.1f (s) before land\n", hover_time_);
-                    hoverAt(hover_time_, targetTransfer(goal_enu.x + x_offset_, goal_enu.y + y_offset_, goal_enu.z + z_offset_), rate); // hover at setpoint in hover_time_ second(s)
-                    landingAtFinal(targetTransfer(goal_enu.x + x_offset_, goal_enu.y + y_offset_, goal_enu.z + z_offset_), rate);
+                    if(!return_home_)
+                    {
+                        // ros::param::get("hover_time",hover_time_);
+                        hover_time_ = hover_;
+                        std::printf("- Hovering in %.1f (s) before land\n", hover_time_);
+                        hoverAt(hover_time_, targetTransfer(goal_enu.x + x_offset_, goal_enu.y + y_offset_, goal_enu.z + z_offset_), rate); // hover at setpoint in hover_time_ second(s)
+                        landingAtFinal(targetTransfer(goal_enu.x + x_offset_, goal_enu.y + y_offset_, goal_enu.z + z_offset_), rate);
+                    }
+                    else
+                    {
+                        if(delivery_)
+                        {
+                            hoverAt(hover_time_, targetTransfer(goal_enu.x + x_offset_, goal_enu.y + y_offset_, goal_enu.z + z_offset_), rate); // hover at setpoint in hover_time_ second(s)
+                            landingAt(targetTransfer(goal_enu.x + x_offset_, goal_enu.y + y_offset_, goal_enu.z + z_offset_), rate); // land at each setpoint to unpack - comment if don't want to land at each setpoint
+                        }
+                        else
+                        {
+                            hoverAt(hover_time_, targetTransfer(goal_enu.x + x_offset_, goal_enu.y + y_offset_, goal_enu.z + z_offset_), rate); // hover at setpoint in hover_time_ second(s)
+                        }
+                        home_pose_.pose.position.z = goal_enu.z + z_offset_;
+                        std::printf("\n[ INFO] Returning home\n");
+                        returnHome(home_pose_, rate);
+                    }
+                    
                     break;
                 }
             }

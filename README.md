@@ -45,7 +45,7 @@
 ### There 2 main functions:
 - <span style="color:violet">HOVERING</span>: drone hover at `z` meters (input from keyboard) in `hover_time` seconds (change in launch/offboard.launch)
 - <span style="color:violet">MISSION</span>: fly with the local/GPS setpoints that prepared in launch/offboard.launch or input from keyboard
-### <span style="color:green">Refer the [test_case.md](https://github.com/congtranv/offboard/blob/master/test_case.md) for all detail use cases of OFFBOARD node
+### <span style="color:green">Refer the [test_case.md](test_case.md) for all detail use cases of OFFBOARD node
 
 ### <span style="color:yellow">1. Simulation
 #### <span style="color:cyan">1.1 Run PX4 simulation

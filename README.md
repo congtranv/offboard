@@ -47,7 +47,7 @@
 - <span style="color:violet">MISSION</span>: fly with the local/GPS setpoints that prepared in launch/offboard.launch or input from keyboard
 ### <span style="color:green">Refer the [test_case.md](test_case.md) for all detail use cases of OFFBOARD node
 
-### <span style="color:yellow">1. Simulation
+### <span style="color:yellow">1. Simulation (SITL)
 #### <span style="color:cyan">1.1 Run PX4 simulation
 ```
 roslaunch px4 mavros_posix_sitl.launch
@@ -56,7 +56,10 @@ roslaunch px4 mavros_posix_sitl.launch
 ```
 roslaunch offboard offboard.launch simulation:=true
 ```
-### <span style="color:yellow">2. Practice
+### <span style="color:yellow">2. Practice in test field
+
+##### <span style="color:green">***(can use for HITL simulation)***
+
 #### <span style="color:cyan">2.1 Connect Companion PC to Pixhawk 4 
 ```
 roslaunch mavros px4.launch fcu_url:=/dev/ttyTHS1:921600

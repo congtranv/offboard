@@ -501,13 +501,16 @@ int main(int argc, char **argv)
     else
     {
         std::printf("\n[ WARN] Not avaible function - Please Relaunch\n");
-        std::printf("   > roslaunch offboard offboard.launch simulation:=(true/false) delivery:=(true/false)\n");
+        std::printf("   > roslaunch offboard offboard.launch simulation:=(true/false) delivery:=(true/false) return_home:=(true/false)\n");
         std::printf("   'simulation' for set ARM and switch OFFBOARD mode in auto or receive from RC controller\n");
         std::printf("   simulation:=true, OFFBOARD node will automatic set ARM and switch OFFBOARD mode\n");
         std::printf("   simulation:=false, OFFBOARD node will receive signal to set ARM and switch OFFBOARD mode from RC controller\n");
         std::printf("   'delivery' use in mission mode for landing or hovering at each setpoint\n");
         std::printf("   delivery:=true for landing at each setpoint\n");
         std::printf("   delivery:=false for hovering at each setpoint\n");
+        std::printf("   'return_home' use in mission mode for returning HOME or landing at final setpoint\n");
+        std::printf("   return_home:=true for returning HOME when reached final setpoint\n");
+        std::printf("   return_home:=false for landing at final setpoint\n");
     }
 
     return 0;

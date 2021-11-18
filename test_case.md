@@ -239,3 +239,9 @@ roslaunch offboard offboard.launch
 roslaunch offboard offboard.launch delivery:=true
 ```
 - <span style="color:cyan">Just change parameter `delivery` to `true`, other step is similar Case 13
+
+## <span style="color:violet">Case 15: All caes of Mission mode (case 3 to case 14), add parameter 'return_home' 
+```
+roslaunch offboard offboard.launch [simulation:=true] [delivery:=true] return_home:=true
+```
+- <span style="color:cyan">Set parameter `return_home` to `true` for returning drone to start position. If set `false`, drone will landing at final setpoint

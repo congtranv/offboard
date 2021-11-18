@@ -414,17 +414,23 @@ void returnHome(geometry_msgs::PoseStamped home, ros::Rate rate)
     bool home_reached = false;
     while(ros::ok() && !home_reached)
     {
-        home_pose_.header.stamp = ros::Time::now();
-        local_pose_pub_.publish(home_pose_);
+        vel_ = velLimit(vel_desired_, current_pose_, home);
 
-        home_reached = checkPosition(0.05, current_pose_, home_pose_);
+        target_pose_.pose.position.x = current_pose_.pose.position.x + vel_[0];
+        target_pose_.pose.position.y = current_pose_.pose.position.y + vel_[1];
+        target_pose_.pose.position.z = current_pose_.pose.position.z + vel_[2];
+
+        target_pose_.header.stamp = ros::Time::now();
+        local_pose_pub_.publish(target_pose_);
+
+        home_reached = checkPosition(0.1, current_pose_, home);
         if(home_reached)
         {
             hover_time_ = hover_;
             std::printf("[ INFO] Hovering at %.1f (m) in %.1f (s)\n", home_pose_.pose.position.z, hover_time_);
             
-            hoverAt(hover_time_, home_pose_, rate);
-            landingAtFinal(home_pose_, rate);
+            hoverAt(hover_time_, home, rate);
+            landingAtFinal(home, rate);
         }
         else
         {

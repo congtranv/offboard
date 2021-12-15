@@ -41,8 +41,9 @@ ros::Subscriber local_pose_sub_;
 ros::Subscriber global_pos_sub_;
 ros::Subscriber velocity_body_sub_;
 
-ros::Publisher local_pose_pub_;
+ros::Subscriber opt_point_sub_;
 
+ros::Publisher local_pose_pub_;
 ros::ServiceClient set_mode_client_;
 
 mavros_msgs::State current_state_;
@@ -50,6 +51,8 @@ geometry_msgs::PoseStamped current_pose_;
 geometry_msgs::PoseStamped home_pose_;
 geometry_msgs::PoseStamped target_pose_;
 geometry_msgs::TwistStamped current_vel_;
+geometry_msgs::Point optimization_point_;
+bool opt_pt_received_ = false;
 sensor_msgs::NavSatFix current_global_;
 geographic_msgs::GeoPoseStamped goal_global_;
 mavros_msgs::SetMode flight_mode_;

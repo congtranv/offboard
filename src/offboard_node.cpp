@@ -21,6 +21,12 @@ void velocityBodyCallback(const geometry_msgs::TwistStamped::ConstPtr& msg)
     current_vel_ = *msg;
 }
 
+void optPointCallback(const geometry_msgs::Point::ConstPtr& msg)
+{
+    optimization_point_ = *msg;
+    opt_pt_received_ = true;
+}
+
 int main(int argc, char **argv)
 {
     ros::init(argc, argv, "offboard_node");
@@ -31,9 +37,10 @@ int main(int argc, char **argv)
     global_pos_sub_ = nh.subscribe<sensor_msgs::NavSatFix>("/mavros/global_position/global", 50, globalPositionCallback);
     velocity_body_sub_ = nh.subscribe<geometry_msgs::TwistStamped>("/mavros/local_position/velocity_body", 50, velocityBodyCallback);
 
+    opt_point_sub_ = nh.subscribe<geometry_msgs::Point>("optimization_point", 1, optPointCallback);
+
     local_pose_pub_ = nh.advertise<geometry_msgs::PoseStamped>("/mavros/setpoint_position/local", 100);
     set_mode_client_ = nh.serviceClient<mavros_msgs::SetMode>("/mavros/set_mode");
-
     ros::ServiceClient arming_client = nh.serviceClient<mavros_msgs::CommandBool> 
             ("mavros/cmd/arming");
 
@@ -179,7 +186,7 @@ int main(int argc, char **argv)
         takeOff(target_pose_, rate);
         landingAtFinal(targetTransfer(x_hover, y_hover, z_hover), rate);
     }
-    else if(c == '2') // Fly with setpoints
+    else if(c == '2') // Fly with setpoints from input
     {
         std::printf("\n[ INFO] Mode 2: Fly with mission\n");
         std::printf("\n[ INFO] Parameter 'return_home' is set %s\n", return_home_ ? "true":"false");
@@ -328,12 +335,6 @@ int main(int argc, char **argv)
                 target_pose_.header.stamp = ros::Time::now();
                 local_pose_pub_.publish(target_pose_); // publish target
 
-                // print information    
-                std::printf("\nCurrent local position: [%.1f, %.1f, %.1f]\n", current_pose_.pose.position.x, current_pose_.pose.position.y, current_pose_.pose.position.z);
-                std::printf("Target local position: [%.1f, %.1f, %.1f]\n", x_target_[i], y_target_[i], z_target_[i]);
-                // std::printf("[ DEBUG] Desired velocity: %.2f (m/s)\n", vel_desired_);
-                // std::printf("[ DEBUG] Body velocity: %.2f (m/s)\n", avgBodyVelocity(current_vel_));
-
                 // calculate distance between current_pose_ and target_pose_
                 distance_ = distanceMeasure(current_pose_, targetTransfer(x_target_[i], y_target_[i], z_target_[i]));
                 std::printf("Distance to target: %.1f (m) \n", distance_);
@@ -343,140 +344,166 @@ int main(int argc, char **argv)
                 bool target_reached = checkPosition(check_error_, current_pose_, targetTransfer(x_target_[i], y_target_[i], z_target_[i]));
                 // std::printf("[ DEBUG] Target reached: %s\n", target_reached ? "true" : "false");
 
-                if(target_reached && !final_position_) // drone reached start or middle setpoint(s)
+                if(target_reached) // && !final_position_) // drone reached start or middle setpoint(s)
                 {
-                    // print information
                     std::printf("\n[ INFO] Reached position: [%.1f, %.1f, %.1f]\n", current_pose_.pose.position.x, current_pose_.pose.position.y, current_pose_.pose.position.z);   
-                    std::printf("- Target position: [%.1f, %.1f, %.1f]\n", x_target_[i], y_target_[i], z_target_[i]);
-                    std::printf("- Next target: [%.1f, %.1f, %.1f]\n", x_target_[i+1], y_target_[i+1], z_target_[i+1]);
                     
-                    // ros::param::get("hover_time", hover_time_);
                     hover_time_ = hover_;
                     std::printf("- Hovering in %.1f (s)\n", hover_time_);
-                    
-                    if(delivery_)
-                    {
-                        hoverAt(hover_time_, targetTransfer(x_target_[i], y_target_[i], z_target_[i]), rate); // hover at setpoint in hover_time_ second(s)
-                        landingAt(targetTransfer(x_target_[i], y_target_[i], z_target_[i]), rate); // land at each setpoint to unpack - comment if don't want to land at each setpoint
-                    }
-                    else
-                    {
-                        hoverAt(hover_time_, targetTransfer(x_target_[i], y_target_[i], z_target_[i]), rate); // hover at setpoint in hover_time_ second(s)
-                    }
-                    
+                
+                    hoverAt(hover_time_, targetTransfer(x_target_[i], y_target_[i], z_target_[i]), rate); // hover at setpoint in hover_time_ second(s)                    
                     i+=1; // next setpoint
-                }
-                if(target_reached && final_position_) // drone reached final setpoint
-                { 
-                    // print information
-                    std::printf("\n[ INFO] Reached FINAL position: [%.1f, %.1f, %.1f]\n", current_pose_.pose.position.x, current_pose_.pose.position.y, current_pose_.pose.position.z);
-                    
-                    if(!return_home_)
-                    {
-                        // ros::param::get("hover_time",hover_time_);
-                        hover_time_ = hover_;
-                        std::printf("- Hovering in %.1f (s) before land\n", hover_time_);
-                        hoverAt(hover_time_, targetTransfer(x_target_[target_num_-1], y_target_[target_num_-1], z_target_[target_num_-1]), rate); // hover at setpoint in hover_time_ second(s)
-                        landingAtFinal(targetTransfer(x_target_[target_num_-1], y_target_[target_num_-1], z_target_[target_num_-1]), rate);
-                    }
-                    else
-                    {
-                        if(delivery_)
-                        {
-                            hoverAt(hover_time_, targetTransfer(x_target_[target_num_-1], y_target_[target_num_-1], z_target_[target_num_-1]), rate); // hover at setpoint in hover_time_ second(s)
-                            landingAt(targetTransfer(x_target_[target_num_-1], y_target_[target_num_-1], z_target_[target_num_-1]), rate); // land at each setpoint to unpack - comment if don't want to land at each setpoint
-                        }
-                        else
-                        {
-                            hoverAt(hover_time_, targetTransfer(x_target_[target_num_-1], y_target_[target_num_-1], z_target_[target_num_-1]), rate); // hover at setpoint in hover_time_ second(s)
-                        }
-                        home_pose_.pose.position.z = z_target_[target_num_-1];
-                        std::printf("\n[ INFO] Returning home\n");
-                        returnHome(home_pose_, rate);
-                    }
-                    
                     break;
                 }
             }
-            else // // input_type_ == false: global input
+            ros::spinOnce();
+            rate.sleep();
+        }
+        if(!opt_pt_received_) // Fly with setpoints from input
+        {
+            while(ros::ok())
             {
-                // convert global to local position
-                if(i < (goal_num_-1)) // start and middle setpoints
+                if(input_type_) // input_type_ == true: local input
                 {
-                    final_position_ = false;
-                    goal_enu = WGS84ToENU(goalTransfer(lat_goal_[i], lon_goal_[i], alt_goal_[i]), global_ref_); 
-                }
-                else
-                {
-                    final_position_ = true;
-                    goal_enu = WGS84ToENU(goalTransfer(lat_goal_[goal_num_-1], lon_goal_[goal_num_-1], alt_goal_[goal_num_-1]), global_ref_);
-                }
-                // ros::param::get("desired_velocity", vel_desired_);
-                vel_ = velLimit(vel_desired_, current_pose_, targetTransfer(goal_enu.x + x_offset_, goal_enu.y + y_offset_, goal_enu.z + z_offset_)); // drone land at vel_desired_ (m/s)
-
-                // target_pose_ = current_pose_ + delta_s (delta_s = vel_(m/s)*1(s))
-                target_pose_ = targetTransfer(current_pose_.pose.position.x + vel_[0], current_pose_.pose.position.y + vel_[1], current_pose_.pose.position.z + vel_[2]);
-                target_pose_.header.stamp = ros::Time::now();
-                local_pose_pub_.publish(target_pose_); // publish target
-
-                // print information
-                std::printf("\nCurrent GPS position: [%.8f, %.8f, %.3f]\n", current_global_.latitude, current_global_.longitude, current_global_.altitude);
-                std::printf("Goal GPS position: [%.8f, %.8f, %.3f]\n", lat_goal_[i], lon_goal_[i], alt_goal_[i]);
-            
-                std::printf("\nCurrent local position: [%.1f, %.1f, %.1f]\n", current_pose_.pose.position.x, current_pose_.pose.position.y, current_pose_.pose.position.z);
-                std::printf("Target local position: [%.1f, %.1f, %.1f]\n", targetTransfer(goal_enu.x + x_offset_, goal_enu.y + y_offset_, goal_enu.z + z_offset_).pose.position.x, targetTransfer(goal_enu.x + x_offset_, goal_enu.y + y_offset_, goal_enu.z + z_offset_).pose.position.y, targetTransfer(goal_enu.x + x_offset_, goal_enu.y + y_offset_, goal_enu.z + z_offset_).pose.position.z);
-                // std::printf("[ DEBUG] Desired velocity: %.3f (m/s)\n", vel_desired_);
-                // std::printf("[ DEBUG] Body velocity: %.3f (m/s)\n", avgBodyVelocity(current_vel_));
-
-                // calculate distance between current_pose_ and target_pose_
-                distance_ = distanceMeasure(current_pose_, targetTransfer(goal_enu.x + x_offset_, goal_enu.y + y_offset_, goal_enu.z + z_offset_));
-                std::printf("Distance to goal: %.1f (m) \n", distance_);
-
-                // check when drone reached setpoint
-                check_error_ = goal_error_;
-                bool target_reached = checkPosition(check_error_, current_pose_, targetTransfer(goal_enu.x + x_offset_, goal_enu.y + y_offset_, goal_enu.z + z_offset_));
-                // std::printf("[ DEBUG] Target reached: %s\n", target_reached ? "true" : "false");
-
-                if(target_reached && !final_position_) // drone reached start or middle setpoint(s)
-                {
-                    // print information
-                    std::printf("\n[ INFO] Reached position: [%.8f, %.8f, %.3f]\n", current_global_.latitude, current_global_.longitude, current_global_.altitude);   
-                    std::printf("- Goal position: [%.8f, %.8f, %.3f]\n", lat_goal_[i], lon_goal_[i], alt_goal_[i]);
-                    std::printf("- Next goal: [%.8f, %.8f, %.3f]\n", lat_goal_[i+1], lon_goal_[i+1], alt_goal_[i+1]);
-                    std::printf("\n[ INFO] Local position: [%.1f, %.1f, %.1f]\n", current_pose_.pose.position.x, current_pose_.pose.position.y, current_pose_.pose.position.z);   
-                    std::printf("- Converted target: [%.1f, %.1f, %.1f]\n", targetTransfer(goal_enu.x + x_offset_, goal_enu.y + y_offset_, goal_enu.z + z_offset_).pose.position.x, targetTransfer(goal_enu.x + x_offset_, goal_enu.y + y_offset_, goal_enu.z + z_offset_).pose.position.y, targetTransfer(goal_enu.x + x_offset_, goal_enu.y + y_offset_, goal_enu.z + z_offset_).pose.position.z);
-
-                    // ros::param::get("hover_time",hover_time_);
-                    hover_time_ = hover_;
-                    std::printf("- Hovering in %.1f (s)\n", hover_time_);
-                    
-                    if(delivery_)
+                    // ros::param::get("desired_velocity", vel_desired_);
+                    if(i < (target_num_-1)) // start and middle setpoints
                     {
-                        hoverAt(hover_time_, targetTransfer(goal_enu.x + x_offset_, goal_enu.y + y_offset_, goal_enu.z + z_offset_), rate); // hover at setpoint in hover_time_ second(s)
-                        landingAt(targetTransfer(goal_enu.x + x_offset_, goal_enu.y + y_offset_, goal_enu.z + z_offset_), rate); // land at each setpoint to unpack - comment if don't want to land at each setpoint
+                        final_position_ = false;
+                        vel_ = velLimit(vel_desired_, current_pose_, targetTransfer(x_target_[i], y_target_[i], z_target_[i])); // drone fly at vel_desired_ (m/s)
+                    }
+                    else // final setpoint
+                    {
+                        final_position_ = true;
+                        vel_ = velLimit(vel_desired_, current_pose_, targetTransfer(x_target_[target_num_-1], y_target_[target_num_-1], z_target_[target_num_-1])); // drone land at vel_desired_ (m/s)
+                    }
+
+                    // target_pose_ = current_pose_ + delta_s (delta_s = vel_(m/s)*1(s))
+                    target_pose_ = targetTransfer(current_pose_.pose.position.x + vel_[0], current_pose_.pose.position.y + vel_[1], current_pose_.pose.position.z + vel_[2]);
+                    target_pose_.header.stamp = ros::Time::now();
+                    local_pose_pub_.publish(target_pose_); // publish target
+
+                    // print information    
+                    std::printf("\nCurrent local position: [%.1f, %.1f, %.1f]\n", current_pose_.pose.position.x, current_pose_.pose.position.y, current_pose_.pose.position.z);
+                    std::printf("Target local position: [%.1f, %.1f, %.1f]\n", x_target_[i], y_target_[i], z_target_[i]);
+                    // std::printf("[ DEBUG] Desired velocity: %.2f (m/s)\n", vel_desired_);
+                    // std::printf("[ DEBUG] Body velocity: %.2f (m/s)\n", avgBodyVelocity(current_vel_));
+
+                    // calculate distance between current_pose_ and target_pose_
+                    distance_ = distanceMeasure(current_pose_, targetTransfer(x_target_[i], y_target_[i], z_target_[i]));
+                    std::printf("Distance to target: %.1f (m) \n", distance_);
+
+                    // check when drone reached setpoint
+                    check_error_ = target_error_;
+                    bool target_reached = checkPosition(check_error_, current_pose_, targetTransfer(x_target_[i], y_target_[i], z_target_[i]));
+                    // std::printf("[ DEBUG] Target reached: %s\n", target_reached ? "true" : "false");
+
+                    if(target_reached && !final_position_) // drone reached start or middle setpoint(s)
+                    {
+                        // print information
+                        std::printf("\n[ INFO] Reached position: [%.1f, %.1f, %.1f]\n", current_pose_.pose.position.x, current_pose_.pose.position.y, current_pose_.pose.position.z);   
+                        std::printf("- Target position: [%.1f, %.1f, %.1f]\n", x_target_[i], y_target_[i], z_target_[i]);
+                        std::printf("- Next target: [%.1f, %.1f, %.1f]\n", x_target_[i+1], y_target_[i+1], z_target_[i+1]);
+                        
+                        // ros::param::get("hover_time", hover_time_);
+                        hover_time_ = hover_;
+                        std::printf("- Hovering in %.1f (s)\n", hover_time_);
+                        
+                        if(delivery_)
+                        {
+                            hoverAt(hover_time_, targetTransfer(x_target_[i], y_target_[i], z_target_[i]), rate); // hover at setpoint in hover_time_ second(s)
+                            landingAt(targetTransfer(x_target_[i], y_target_[i], z_target_[i]), rate); // land at each setpoint to unpack - comment if don't want to land at each setpoint
+                        }
+                        else
+                        {
+                            hoverAt(hover_time_, targetTransfer(x_target_[i], y_target_[i], z_target_[i]), rate); // hover at setpoint in hover_time_ second(s)
+                        }
+                        
+                        i+=1; // next setpoint
+                    }
+                    if(target_reached && final_position_) // drone reached final setpoint
+                    { 
+                        // print information
+                        std::printf("\n[ INFO] Reached FINAL position: [%.1f, %.1f, %.1f]\n", current_pose_.pose.position.x, current_pose_.pose.position.y, current_pose_.pose.position.z);
+                        
+                        if(!return_home_)
+                        {
+                            // ros::param::get("hover_time",hover_time_);
+                            hover_time_ = hover_;
+                            std::printf("- Hovering in %.1f (s) before land\n", hover_time_);
+                            hoverAt(hover_time_, targetTransfer(x_target_[target_num_-1], y_target_[target_num_-1], z_target_[target_num_-1]), rate); // hover at setpoint in hover_time_ second(s)
+                            landingAtFinal(targetTransfer(x_target_[target_num_-1], y_target_[target_num_-1], z_target_[target_num_-1]), rate);
+                        }
+                        else
+                        {
+                            if(delivery_)
+                            {
+                                hoverAt(hover_time_, targetTransfer(x_target_[target_num_-1], y_target_[target_num_-1], z_target_[target_num_-1]), rate); // hover at setpoint in hover_time_ second(s)
+                                landingAt(targetTransfer(x_target_[target_num_-1], y_target_[target_num_-1], z_target_[target_num_-1]), rate); // land at each setpoint to unpack - comment if don't want to land at each setpoint
+                            }
+                            else
+                            {
+                                hoverAt(hover_time_, targetTransfer(x_target_[target_num_-1], y_target_[target_num_-1], z_target_[target_num_-1]), rate); // hover at setpoint in hover_time_ second(s)
+                            }
+                            home_pose_.pose.position.z = z_target_[target_num_-1];
+                            std::printf("\n[ INFO] Returning home\n");
+                            returnHome(home_pose_, rate);
+                        }
+                        
+                        break;
+                    }
+                }
+                else // // input_type_ == false: global input
+                {
+                    // convert global to local position
+                    if(i < (goal_num_-1)) // start and middle setpoints
+                    {
+                        final_position_ = false;
+                        goal_enu = WGS84ToENU(goalTransfer(lat_goal_[i], lon_goal_[i], alt_goal_[i]), global_ref_); 
                     }
                     else
                     {
-                        hoverAt(hover_time_, targetTransfer(goal_enu.x + x_offset_, goal_enu.y + y_offset_, goal_enu.z + z_offset_), rate); // hover at setpoint in hover_time_ second(s)
+                        final_position_ = true;
+                        goal_enu = WGS84ToENU(goalTransfer(lat_goal_[goal_num_-1], lon_goal_[goal_num_-1], alt_goal_[goal_num_-1]), global_ref_);
                     }
-                    
-                    i+=1; // next setpoint
-                }
-                if(target_reached && final_position_) // drone reached final setpoint
-                {
-                    // print information
-                    std::printf("\n[ INFO] Reached FINAL position: [%.8f, %.8f, %.3f]\n", current_global_.latitude, current_global_.longitude, current_global_.altitude);
+                    // ros::param::get("desired_velocity", vel_desired_);
+                    vel_ = velLimit(vel_desired_, current_pose_, targetTransfer(goal_enu.x + x_offset_, goal_enu.y + y_offset_, goal_enu.z + z_offset_)); // drone land at vel_desired_ (m/s)
 
-                    if(!return_home_)
+                    // target_pose_ = current_pose_ + delta_s (delta_s = vel_(m/s)*1(s))
+                    target_pose_ = targetTransfer(current_pose_.pose.position.x + vel_[0], current_pose_.pose.position.y + vel_[1], current_pose_.pose.position.z + vel_[2]);
+                    target_pose_.header.stamp = ros::Time::now();
+                    local_pose_pub_.publish(target_pose_); // publish target
+
+                    // print information
+                    std::printf("\nCurrent GPS position: [%.8f, %.8f, %.3f]\n", current_global_.latitude, current_global_.longitude, current_global_.altitude);
+                    std::printf("Goal GPS position: [%.8f, %.8f, %.3f]\n", lat_goal_[i], lon_goal_[i], alt_goal_[i]);
+                
+                    std::printf("\nCurrent local position: [%.1f, %.1f, %.1f]\n", current_pose_.pose.position.x, current_pose_.pose.position.y, current_pose_.pose.position.z);
+                    std::printf("Target local position: [%.1f, %.1f, %.1f]\n", targetTransfer(goal_enu.x + x_offset_, goal_enu.y + y_offset_, goal_enu.z + z_offset_).pose.position.x, targetTransfer(goal_enu.x + x_offset_, goal_enu.y + y_offset_, goal_enu.z + z_offset_).pose.position.y, targetTransfer(goal_enu.x + x_offset_, goal_enu.y + y_offset_, goal_enu.z + z_offset_).pose.position.z);
+                    // std::printf("[ DEBUG] Desired velocity: %.3f (m/s)\n", vel_desired_);
+                    // std::printf("[ DEBUG] Body velocity: %.3f (m/s)\n", avgBodyVelocity(current_vel_));
+
+                    // calculate distance between current_pose_ and target_pose_
+                    distance_ = distanceMeasure(current_pose_, targetTransfer(goal_enu.x + x_offset_, goal_enu.y + y_offset_, goal_enu.z + z_offset_));
+                    std::printf("Distance to goal: %.1f (m) \n", distance_);
+
+                    // check when drone reached setpoint
+                    check_error_ = goal_error_;
+                    bool target_reached = checkPosition(check_error_, current_pose_, targetTransfer(goal_enu.x + x_offset_, goal_enu.y + y_offset_, goal_enu.z + z_offset_));
+                    // std::printf("[ DEBUG] Target reached: %s\n", target_reached ? "true" : "false");
+
+                    if(target_reached && !final_position_) // drone reached start or middle setpoint(s)
                     {
+                        // print information
+                        std::printf("\n[ INFO] Reached position: [%.8f, %.8f, %.3f]\n", current_global_.latitude, current_global_.longitude, current_global_.altitude);   
+                        std::printf("- Goal position: [%.8f, %.8f, %.3f]\n", lat_goal_[i], lon_goal_[i], alt_goal_[i]);
+                        std::printf("- Next goal: [%.8f, %.8f, %.3f]\n", lat_goal_[i+1], lon_goal_[i+1], alt_goal_[i+1]);
+                        std::printf("\n[ INFO] Local position: [%.1f, %.1f, %.1f]\n", current_pose_.pose.position.x, current_pose_.pose.position.y, current_pose_.pose.position.z);   
+                        std::printf("- Converted target: [%.1f, %.1f, %.1f]\n", targetTransfer(goal_enu.x + x_offset_, goal_enu.y + y_offset_, goal_enu.z + z_offset_).pose.position.x, targetTransfer(goal_enu.x + x_offset_, goal_enu.y + y_offset_, goal_enu.z + z_offset_).pose.position.y, targetTransfer(goal_enu.x + x_offset_, goal_enu.y + y_offset_, goal_enu.z + z_offset_).pose.position.z);
+
                         // ros::param::get("hover_time",hover_time_);
                         hover_time_ = hover_;
-                        std::printf("- Hovering in %.1f (s) before land\n", hover_time_);
-                        hoverAt(hover_time_, targetTransfer(goal_enu.x + x_offset_, goal_enu.y + y_offset_, goal_enu.z + z_offset_), rate); // hover at setpoint in hover_time_ second(s)
-                        landingAtFinal(targetTransfer(goal_enu.x + x_offset_, goal_enu.y + y_offset_, goal_enu.z + z_offset_), rate);
-                    }
-                    else
-                    {
+                        std::printf("- Hovering in %.1f (s)\n", hover_time_);
+                        
                         if(delivery_)
                         {
                             hoverAt(hover_time_, targetTransfer(goal_enu.x + x_offset_, goal_enu.y + y_offset_, goal_enu.z + z_offset_), rate); // hover at setpoint in hover_time_ second(s)
@@ -486,16 +513,97 @@ int main(int argc, char **argv)
                         {
                             hoverAt(hover_time_, targetTransfer(goal_enu.x + x_offset_, goal_enu.y + y_offset_, goal_enu.z + z_offset_), rate); // hover at setpoint in hover_time_ second(s)
                         }
-                        home_pose_.pose.position.z = goal_enu.z + z_offset_;
-                        std::printf("\n[ INFO] Returning home\n");
-                        returnHome(home_pose_, rate);
+                        
+                        i+=1; // next setpoint
                     }
-                    
-                    break;
+                    if(target_reached && final_position_) // drone reached final setpoint
+                    {
+                        // print information
+                        std::printf("\n[ INFO] Reached FINAL position: [%.8f, %.8f, %.3f]\n", current_global_.latitude, current_global_.longitude, current_global_.altitude);
+
+                        if(!return_home_)
+                        {
+                            // ros::param::get("hover_time",hover_time_);
+                            hover_time_ = hover_;
+                            std::printf("- Hovering in %.1f (s) before land\n", hover_time_);
+                            hoverAt(hover_time_, targetTransfer(goal_enu.x + x_offset_, goal_enu.y + y_offset_, goal_enu.z + z_offset_), rate); // hover at setpoint in hover_time_ second(s)
+                            landingAtFinal(targetTransfer(goal_enu.x + x_offset_, goal_enu.y + y_offset_, goal_enu.z + z_offset_), rate);
+                        }
+                        else
+                        {
+                            if(delivery_)
+                            {
+                                hoverAt(hover_time_, targetTransfer(goal_enu.x + x_offset_, goal_enu.y + y_offset_, goal_enu.z + z_offset_), rate); // hover at setpoint in hover_time_ second(s)
+                                landingAt(targetTransfer(goal_enu.x + x_offset_, goal_enu.y + y_offset_, goal_enu.z + z_offset_), rate); // land at each setpoint to unpack - comment if don't want to land at each setpoint
+                            }
+                            else
+                            {
+                                hoverAt(hover_time_, targetTransfer(goal_enu.x + x_offset_, goal_enu.y + y_offset_, goal_enu.z + z_offset_), rate); // hover at setpoint in hover_time_ second(s)
+                            }
+                            home_pose_.pose.position.z = goal_enu.z + z_offset_;
+                            std::printf("\n[ INFO] Returning home\n");
+                            returnHome(home_pose_, rate);
+                        }
+                        
+                        break;
+                    }
                 }
+                ros::spinOnce();
+                rate.sleep();
             }
-            ros::spinOnce();
-            rate.sleep();
+        }
+        // if(opt_pt_received_) // Fly with setpoints from optimization planner
+        else
+        {
+            input_type_ == true;
+            while(ros::ok())
+            {
+                if(input_type_) // input_type_ == true: local input
+                {
+                    target_pose_ = targetTransfer(optimization_point_.x, optimization_point_.y, optimization_point_.z);
+                    target_pose_.header.stamp = ros::Time::now();
+                    local_pose_pub_.publish(target_pose_); // publish target
+
+                    // print information    
+                    std::printf("\nCurrent local position: [%.1f, %.1f, %.1f]\n", current_pose_.pose.position.x, current_pose_.pose.position.y, current_pose_.pose.position.z);
+                    check_error_ = target_error_;
+                    
+                    bool target_reached = checkPosition(check_error_, current_pose_, targetTransfer(x_target_[target_num_-1], y_target_[target_num_-1], z_target_[target_num_-1]));
+                    if(target_reached) // && final_position_) // drone reached final setpoint
+                    { 
+                        // print information
+                        std::printf("\n[ INFO] Reached FINAL position: [%.1f, %.1f, %.1f]\n", current_pose_.pose.position.x, current_pose_.pose.position.y, current_pose_.pose.position.z);
+                        
+                        if(!return_home_)
+                        {
+                            // ros::param::get("hover_time",hover_time_);
+                            hover_time_ = hover_;
+                            std::printf("- Hovering in %.1f (s) before land\n", hover_time_);
+                            hoverAt(hover_time_, targetTransfer(x_target_[target_num_-1], y_target_[target_num_-1], z_target_[target_num_-1]), rate); // hover at setpoint in hover_time_ second(s)
+                            landingAtFinal(targetTransfer(x_target_[target_num_-1], y_target_[target_num_-1], z_target_[target_num_-1]), rate);
+                        }
+                        else
+                        {
+                            if(delivery_)
+                            {
+                                hoverAt(hover_time_, targetTransfer(x_target_[target_num_-1], y_target_[target_num_-1], z_target_[target_num_-1]), rate); // hover at setpoint in hover_time_ second(s)
+                                landingAt(targetTransfer(x_target_[target_num_-1], y_target_[target_num_-1], z_target_[target_num_-1]), rate); // land at each setpoint to unpack - comment if don't want to land at each setpoint
+                            }
+                            else
+                            {
+                                hoverAt(hover_time_, targetTransfer(x_target_[target_num_-1], y_target_[target_num_-1], z_target_[target_num_-1]), rate); // hover at setpoint in hover_time_ second(s)
+                            }
+                            home_pose_.pose.position.z = z_target_[target_num_-1];
+                            std::printf("\n[ INFO] Returning home\n");
+                            returnHome(home_pose_, rate);
+                        }
+                        
+                        break;
+                    }
+                }
+                ros::spinOnce();
+                rate.sleep();
+            }
         }
     }
     else

@@ -17,6 +17,7 @@
         <rosparam param="target_x_pos">[0.0, 6.0, 6.0, 0.0]</rosparam>
         <rosparam param="target_y_pos">[0.0, 0.0, 6.0, 6.0]</rosparam>
         <rosparam param="target_z_pos">[5.0, 5.0, 5.0, 5.0]</rosparam>
+        <rosparam param="target_yaw">[0.0, 90.0, 180.0, 270.0]</rosparam>
         <param name="number_of_goal" type="int" value="3"/>
         <param name="goal_error" type="double" value="0.2"/>
         <rosparam param="latitude">[21.0065275, 21.0065305, 21.0065295]</rosparam>

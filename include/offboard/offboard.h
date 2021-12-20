@@ -16,6 +16,8 @@
 #include<geographic_msgs/GeoPoseStamped.h>
 #include<sensor_msgs/NavSatFix.h>
 
+#include<Eigen/Dense>
+
 #include<iostream>
 #include<cmath>
 #include<cstdio>
@@ -57,6 +59,7 @@ class OffboardControl
 	geometry_msgs::PoseStamped target_enu_pose_;
 	geometry_msgs::TwistStamped current_body_vel_;
 	geometry_msgs::Point opt_point_;
+	std::vector<geometry_msgs::Point> optimization_point_;
 	sensor_msgs::NavSatFix current_gps_position_;
 	sensor_msgs::NavSatFix home_gps_position_;
 	geographic_msgs::GeoPoseStamped goal_gps_position_;
@@ -75,6 +78,9 @@ class OffboardControl
 	std::vector<double> x_target_;
 	std::vector<double> y_target_; 
 	std::vector<double> z_target_;
+	// std::vector<double> roll_target_;
+	// std::vector<double> pitch_target_; 
+	std::vector<double> yaw_target_;
 	int num_of_gps_goal_;
 	std::vector<double> lat_goal_; 
 	std::vector<double> lon_goal_;
@@ -122,17 +128,13 @@ class OffboardControl
         return x*x;
     }; 
 
-	sensor_msgs::NavSatFix goalTransfer(double lat, double lon, double alt); // transfer lat, lon, alt setpoint to same message type with global_position
-	geometry_msgs::PoseStamped targetTransfer(double x, double y, double z); // transfer x, y, z setpoint to same message type with local_position
-	// geometry_msgs::Point pointFromPoseSubtraction(geometry_msgs::PoseStamped pose1, geometry_msgs::PoseStamped pose2);
-	// geometry_msgs::Point pointFromDouble(double x, double y, double z);
-	// void doubleFromPoint(double x, double y, double z, geometry_msgs::Point point);
-
-	bool checkPositionError(double error, geometry_msgs::PoseStamped current, geometry_msgs::PoseStamped target);
-	bool checkOrientationError(double error, geometry_msgs::PoseStamped current, geometry_msgs::PoseStamped target);
-	
-	double distanceBetween(geometry_msgs::PoseStamped current, geometry_msgs::PoseStamped target);
-	geometry_msgs::Vector3 velComponentsCalc(double v_desired, geometry_msgs::PoseStamped current, geometry_msgs::PoseStamped target);
+	void inputSetpoint();
+	void inputENU();
+	void enuFlight();
+	void inputGPS();
+	void gpsFlight();
+	void inputPlanner();
+	void plannerFlight();
 
 	void takeOff(geometry_msgs::PoseStamped setpoint, double hover_time);
 	void hovering(geometry_msgs::PoseStamped setpoint, double hover_time);
@@ -140,14 +142,18 @@ class OffboardControl
 	void returnHome(geometry_msgs::PoseStamped home_pose);
 	void delivery(geometry_msgs::PoseStamped unpack_pose, double unpack_time);
 	
-	void inputSetpoint();
-	void inputENU();
-	void inputGPS();
-	void inputPlanner();
+	sensor_msgs::NavSatFix goalTransfer(double lat, double lon, double alt); // transfer lat, lon, alt setpoint to same message type with global_position
+	geometry_msgs::PoseStamped targetTransfer(double x, double y, double z); // transfer x, y, z setpoint to same message type with local_position
+	geometry_msgs::PoseStamped targetTransfer(double x, double y, double z, double yaw);
 
-	void enuFlight();
-	void gpsFlight();
-	void plannerFlight();
+	bool checkPositionError(double error, geometry_msgs::PoseStamped current, geometry_msgs::PoseStamped target);
+	bool checkOrientationError(double error, geometry_msgs::PoseStamped current, geometry_msgs::PoseStamped target);
+
+	Eigen::Vector3d getRPY(geometry_msgs::Quaternion quat);
+	// geometry_msgs::Quaternion getQuaternionMsg(double roll, double pitch, double yaw);
+	
+	double distanceBetween(geometry_msgs::PoseStamped current, geometry_msgs::PoseStamped target);
+	geometry_msgs::Vector3 velComponentsCalc(double v_desired, geometry_msgs::PoseStamped current, geometry_msgs::PoseStamped target);
 
 	geometry_msgs::Point WGS84ToECEF(sensor_msgs::NavSatFix wgs84);
 	geographic_msgs::GeoPoint ECEFToWGS84(geometry_msgs::Point ecef);

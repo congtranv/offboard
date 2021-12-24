@@ -1,6 +1,10 @@
 #include"offboard/offboard.h"
 
-OffboardControl::OffboardControl(const ros::NodeHandle &nh, const ros::NodeHandle &nh_private):
+// OffboardControl::OffboardControl(){
+
+// }
+
+OffboardControl::OffboardControl(const ros::NodeHandle &nh, const ros::NodeHandle &nh_private, bool input_setpoint):
   nh_(nh),
   nh_private_(nh_private),
   simulation_mode_enable_(false),
@@ -32,6 +36,7 @@ OffboardControl::OffboardControl(const ros::NodeHandle &nh, const ros::NodeHandl
     nh_private_.getParam("/offboard_node/longitude", lon_goal_);
     nh_private_.getParam("/offboard_node/altitude", alt_goal_);
     nh_private_.getParam("/offboard_node/z_takeoff", z_takeoff_);
+    nh_private_.getParam("/offboard_node/z_delivery", z_delivery_);
     nh_private_.getParam("/offboard_node/land_error", land_error_);
     nh_private_.getParam("/offboard_node/takeoff_hover_time", takeoff_hover_time_);
     nh_private_.getParam("/offboard_node/hover_time", hover_time_);
@@ -41,7 +46,10 @@ OffboardControl::OffboardControl(const ros::NodeHandle &nh, const ros::NodeHandl
     nh_private_.getParam("/offboard_node/return_velcity", return_vel_);
     
     waitForPredicate(10.0);
-    inputSetpoint();
+    if(input_setpoint)
+    {
+        inputSetpoint();
+    }
 }
 
 OffboardControl::~OffboardControl(){
@@ -155,7 +163,7 @@ void OffboardControl::waitForStable(double hz)
     std::printf("\n[ INFO] Waiting for stable state\n");
 
     ref_gps_position_ = current_gps_position_;
-    geometry_msgs::Point converted_enu, goal_enu;
+    geometry_msgs::Point converted_enu;
     for(int i=0; i<100; i++)
     {
         converted_enu = WGS84ToENU(current_gps_position_, ref_gps_position_);
@@ -326,6 +334,11 @@ void OffboardControl::inputENU()
     {
         inputENU();
     }
+    waitForStable(10.0);
+    setOffboardStream(10.0,targetTransfer(current_enu_pose_.pose.position.x, current_enu_pose_.pose.position.y, z_takeoff_));
+    waitForArmAndOffboard(10.0);
+    takeOff(targetTransfer(current_enu_pose_.pose.position.x, current_enu_pose_.pose.position.y, z_takeoff_), takeoff_hover_time_);
+    std::printf("\n[ INFO] Flight with ENU setpoint\n");
     enuFlight();
 }
 
@@ -388,11 +401,6 @@ void OffboardControl::inputENU()
 
 void OffboardControl::enuFlight()
 {
-    waitForStable(10.0);
-    setOffboardStream(10.0,targetTransfer(current_enu_pose_.pose.position.x, current_enu_pose_.pose.position.y, z_takeoff_));
-    waitForArmAndOffboard(10.0);
-    takeOff(targetTransfer(current_enu_pose_.pose.position.x, current_enu_pose_.pose.position.y, z_takeoff_), takeoff_hover_time_);
-    std::printf("\n[ INFO] Flight with ENU setpoint\n");
     ros::Rate rate(10.0);
     int i=0;
     geometry_msgs::PoseStamped setpoint;
@@ -428,7 +436,7 @@ void OffboardControl::enuFlight()
             hovering(setpoint, hover_time_);
             if(delivery_mode_enable_)
             {
-                delivery(setpoint, unpack_time_);
+                delivery(targetTransfer(setpoint.pose.position.x, setpoint.pose.position.y, z_delivery_), unpack_time_);
             }
             std::printf("\n[ INFO] Next target: [%.1f, %.1f, %.1f]\n", x_target_[i+1], y_target_[i+1], z_target_[i+1]);
             i+=1;
@@ -445,7 +453,7 @@ void OffboardControl::enuFlight()
             {
                 if(delivery_mode_enable_) 
                 {
-                    delivery(setpoint, unpack_time_);
+                    delivery(targetTransfer(setpoint.pose.position.x, setpoint.pose.position.y, z_delivery_), unpack_time_);
                 }
                 std::printf("\n[ INFO] Returning home [%.1f, %.1f, %.1f]\n",home_enu_pose_.pose.position.x, home_enu_pose_.pose.position.y, home_enu_pose_.pose.position.z);
                 returnHome(targetTransfer(home_enu_pose_.pose.position.x, home_enu_pose_.pose.position.y, setpoint.pose.position.z));
@@ -503,16 +511,16 @@ void OffboardControl::inputGPS()
     {
         inputGPS();
     }
-    gpsFlight();
-}
-
-void OffboardControl::gpsFlight()
-{
     waitForStable(10.0);
     setOffboardStream(10.0, targetTransfer(current_enu_pose_.pose.position.x, current_enu_pose_.pose.position.y, z_takeoff_));
     waitForArmAndOffboard(10.0);
     takeOff(targetTransfer(current_enu_pose_.pose.position.x, current_enu_pose_.pose.position.y, z_takeoff_), takeoff_hover_time_);
     std::printf("\n[ INFO] Flight with GPS setpoint\n");
+    gpsFlight();
+}
+
+void OffboardControl::gpsFlight()
+{
     geometry_msgs::Point goal_enu;
     geometry_msgs::PoseStamped setpoint;
     ros::Rate rate(10.0);
@@ -550,7 +558,7 @@ void OffboardControl::gpsFlight()
             hovering(setpoint, hover_time_);
             if(delivery_mode_enable_)
             {
-                delivery(setpoint, unpack_time_);
+                delivery(targetTransfer(setpoint.pose.position.x, setpoint.pose.position.y, z_delivery_), unpack_time_);
             }
             std::printf("\n[ INFO] Next goal: [%.8f, %.8f, %.3f]\n", lat_goal_[i+1], lon_goal_[i+1], alt_goal_[i+1]);
             i+=1;
@@ -567,7 +575,7 @@ void OffboardControl::gpsFlight()
             {
                 if(delivery_mode_enable_)
                 {
-                    delivery(setpoint, unpack_time_);
+                    delivery(targetTransfer(setpoint.pose.position.x, setpoint.pose.position.y, z_delivery_), unpack_time_);
                 }
                 std::printf("\n[ INFO] Returning home [%.8f, %.8f, %.3f]\n",home_gps_position_.latitude, home_gps_position_.longitude, home_gps_position_.altitude);
                 returnHome(targetTransfer(home_enu_pose_.pose.position.x, home_enu_pose_.pose.position.y, setpoint.pose.position.z));
@@ -590,39 +598,39 @@ void OffboardControl::inputPlanner()
         ros::spinOnce();
         rate.sleep();
     }
-    plannerFlight();
-}
-
-void OffboardControl::plannerFlight()
-{
     waitForStable(10.0);
     setOffboardStream(10.0,targetTransfer(current_enu_pose_.pose.position.x, current_enu_pose_.pose.position.y, z_takeoff_));
     waitForArmAndOffboard(10.0);
     takeOff(targetTransfer(current_enu_pose_.pose.position.x, current_enu_pose_.pose.position.y, z_takeoff_), takeoff_hover_time_);
     std::printf("\n[ INFO] Flight with Planner setpoint\n");
-    std::printf("\n[ INFO] Flight to start point of Optimization path\n");
-    bool first_target_reached = false;
-    bool target_reached = false;
+    // std::printf("\n[ INFO] Flight to start point of Optimization path\n");
+    plannerFlight();
+}
+
+void OffboardControl::plannerFlight()
+{
+    // bool first_target_reached = false;
+    // bool target_reached = false;
     bool final_reached = false;
     geometry_msgs::PoseStamped setpoint;
     ros::Rate rate(50.0);
-    while(ros::ok())
-    {
-        setpoint = targetTransfer(x_target_[0], y_target_[0], z_target_[0]);
-        components_vel_ = velComponentsCalc(vel_desired_, current_enu_pose_, setpoint);
-        target_enu_pose_ = targetTransfer(current_enu_pose_.pose.position.x+components_vel_.x, current_enu_pose_.pose.position.y+components_vel_.y, current_enu_pose_.pose.position.z+components_vel_.z);
-        target_enu_pose_.header.stamp = ros::Time::now();
-        setpoint_pose_pub_.publish(target_enu_pose_);
-        first_target_reached = checkPositionError(target_error_, current_enu_pose_, setpoint);
-        if(first_target_reached)
-        {
-            std::printf("\n[ INFO] Reached start point of Optimization path\n");
-            hovering(current_enu_pose_, 0.5);
-            break;
-        }
-        ros::spinOnce();
-        rate.sleep();
-    }
+    // while(ros::ok())
+    // {
+    //     setpoint = targetTransfer(x_target_[0], y_target_[0], z_target_[0]);
+    //     components_vel_ = velComponentsCalc(vel_desired_, current_enu_pose_, setpoint);
+    //     target_enu_pose_ = targetTransfer(current_enu_pose_.pose.position.x+components_vel_.x, current_enu_pose_.pose.position.y+components_vel_.y, current_enu_pose_.pose.position.z+components_vel_.z);
+    //     target_enu_pose_.header.stamp = ros::Time::now();
+    //     setpoint_pose_pub_.publish(target_enu_pose_);
+    //     first_target_reached = checkPositionError(target_error_, current_enu_pose_, setpoint);
+    //     if(first_target_reached)
+    //     {
+    //         std::printf("\n[ INFO] Reached start point of Optimization path\n");
+    //         hovering(current_enu_pose_, 0.5);
+    //         break;
+    //     }
+    //     ros::spinOnce();
+    //     rate.sleep();
+    // }
     if(opt_point_received_)
     {
         std::printf("[ INFO] Fly with optimization points\n");
@@ -651,6 +659,10 @@ void OffboardControl::plannerFlight()
                 }
                 else
                 {
+                    if(delivery_mode_enable_)
+                    {
+                        delivery(targetTransfer(setpoint.pose.position.x, setpoint.pose.position.y, z_delivery_), unpack_time_);
+                    }
                     std::printf("\n[ INFO] Returning home [%.1f, %.1f, %.1f]\n",home_enu_pose_.pose.position.x, home_enu_pose_.pose.position.y, home_enu_pose_.pose.position.z);
                     returnHome(targetTransfer(home_enu_pose_.pose.position.x, home_enu_pose_.pose.position.y, setpoint.pose.position.z));
                     landing(home_enu_pose_);
@@ -786,14 +798,14 @@ void OffboardControl::returnHome(geometry_msgs::PoseStamped home_pose)
     }
 }
 
-void OffboardControl::delivery(geometry_msgs::PoseStamped unpack_pose, double unpack_time)
+void OffboardControl::delivery(geometry_msgs::PoseStamped setpoint, double unpack_time)
 {
     ros::Rate rate(10.0);
     bool land_reached = false;
     std::printf("[ INFO] Land for unpacking\n");
     while(ros::ok() && !land_reached)
     {
-        components_vel_ = velComponentsCalc(land_vel_, current_enu_pose_, targetTransfer(unpack_pose.pose.position.x, unpack_pose.pose.position.y, 0.5));
+        components_vel_ = velComponentsCalc(land_vel_, current_enu_pose_, targetTransfer(setpoint.pose.position.x, setpoint.pose.position.y, z_delivery_));
 
         target_enu_pose_.pose.position.x = current_enu_pose_.pose.position.x + components_vel_.x;
         target_enu_pose_.pose.position.y = current_enu_pose_.pose.position.y + components_vel_.y;
@@ -808,7 +820,7 @@ void OffboardControl::delivery(geometry_msgs::PoseStamped unpack_pose, double un
         }
         else
         {
-            land_reached = checkPositionError(land_error_, current_enu_pose_, targetTransfer(unpack_pose.pose.position.x, unpack_pose.pose.position.y, 0.5));
+            land_reached = checkPositionError(land_error_, current_enu_pose_, targetTransfer(setpoint.pose.position.x, setpoint.pose.position.y, z_delivery_));
         }
 
         if(land_reached)
@@ -820,11 +832,11 @@ void OffboardControl::delivery(geometry_msgs::PoseStamped unpack_pose, double un
             }
             else
             {
-                hovering(targetTransfer(unpack_pose.pose.position.x, unpack_pose.pose.position.y, 0.5), unpack_time);
+                hovering(targetTransfer(setpoint.pose.position.x, setpoint.pose.position.y, z_delivery_), unpack_time);
                 // TODO: unpack service
             }
-            std::printf("\n[ INFO] Done! Return setpoint [%.1f, %.1f, %.1f]\n", unpack_pose.pose.position.x, unpack_pose.pose.position.y, unpack_pose.pose.position.z);
-            returnHome(unpack_pose);
+            std::printf("\n[ INFO] Done! Return setpoint [%.1f, %.1f, %.1f]\n", setpoint.pose.position.x, setpoint.pose.position.y, setpoint.pose.position.z);
+            returnHome(setpoint);
         }
         else
         {

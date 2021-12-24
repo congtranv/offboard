@@ -5,6 +5,7 @@
     <arg name="desired_velocity" default="0.3"/>
     <arg name="hover_time" default="10.0"/>
     <arg name="unpack_time" default="15.0"/>
+    <arg name="z_delivery" default="0.5"/>
   
     <!-- <rosparam command="load" file="$(find offboard)/config/config.yaml" /> -->
     <node name="offboard_node" pkg="offboard" type="offboard_node" output="screen">
@@ -25,6 +26,7 @@
         <rosparam param="altitude">[7.0, 7.0, 7.0]</rosparam>
 
         <param name="z_takeoff" type="double" value="3.0"/>
+        <param name="z_delivery" type="double" value="$(arg z_delivery)"/>
         <param name="land_error" type="double" value="0.1"/>
         <param name="takeoff_hover_time" type="double" value="5.0"/>
         <param name="hover_time" type="double" value="$(arg hover_time)"/>

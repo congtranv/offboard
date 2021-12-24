@@ -6,8 +6,9 @@ int main(int argc, char **argv)
     ros::NodeHandle nh;
     ros::NodeHandle nh_private("~");
 
-    OffboardControl *offboard = new OffboardControl(nh, nh_private);
-    // OffboardControl offboard(nh, nh_private);
+    bool input_setpoint = true; // if true run offboard control else initialize parameters and receive messages
+
+    OffboardControl *offboard = new OffboardControl(nh, nh_private, input_setpoint);
     ros::spin();
         
     return 0;

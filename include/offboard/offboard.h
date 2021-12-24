@@ -26,7 +26,8 @@
 class OffboardControl
 {
   public:
-	OffboardControl(const ros::NodeHandle &nh, const ros::NodeHandle &nh_private);
+	// OffboardControl();
+	OffboardControl(const ros::NodeHandle &nh, const ros::NodeHandle &nh_private, bool input_setpoint);
 	~OffboardControl();
   private:
 	/* CONSTANT */
@@ -48,6 +49,7 @@ class OffboardControl
 	ros::Subscriber gps_position_sub_; // current gps position subscriber
 	ros::Subscriber velocity_body_sub_; 
 	ros::Subscriber opt_point_sub_; // optimization point from planner subscriber
+	ros::Subscriber odom_sub_;
 
 	ros::Publisher setpoint_pose_pub_; // publish target pose to drone
 	ros::ServiceClient set_mode_client_; // set OFFBOARD mode in simulation
@@ -91,6 +93,7 @@ class OffboardControl
 	double x_off_[100], y_off_[100], z_off_[100];
 	double x_offset_, y_offset_, z_offset_;
 	double z_takeoff_;
+	double z_delivery_;
 
 	double vel_desired_, land_vel_, return_vel_;
 	geometry_msgs::Vector3 components_vel_;
@@ -140,11 +143,11 @@ class OffboardControl
 	void hovering(geometry_msgs::PoseStamped setpoint, double hover_time);
 	void landing(geometry_msgs::PoseStamped setpoint);
 	void returnHome(geometry_msgs::PoseStamped home_pose);
-	void delivery(geometry_msgs::PoseStamped unpack_pose, double unpack_time);
+	void delivery(geometry_msgs::PoseStamped setpoint, double unpack_time);
 	
-	sensor_msgs::NavSatFix goalTransfer(double lat, double lon, double alt); // transfer lat, lon, alt setpoint to same message type with global_position
-	geometry_msgs::PoseStamped targetTransfer(double x, double y, double z); // transfer x, y, z setpoint to same message type with local_position
-	geometry_msgs::PoseStamped targetTransfer(double x, double y, double z, double yaw);
+	sensor_msgs::NavSatFix goalTransfer(double lat, double lon, double alt); // transfer lat, lon, alt setpoint to same message type with gps setpoint msg
+	geometry_msgs::PoseStamped targetTransfer(double x, double y, double z); // transfer x, y, z setpoint to same message type with enu setpoint msg
+	geometry_msgs::PoseStamped targetTransfer(double x, double y, double z, double yaw); // transfer x, y, z, and yaw setpoint to same message type with enu setpoint msg
 
 	bool checkPositionError(double error, geometry_msgs::PoseStamped current, geometry_msgs::PoseStamped target);
 	bool checkOrientationError(double error, geometry_msgs::PoseStamped current, geometry_msgs::PoseStamped target);

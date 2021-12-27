@@ -210,7 +210,7 @@ void OffboardControl::odomCallback(const nav_msgs::Odometry::ConstPtr& msg)
     tf::poseMsgToEigen(current_odom_.pose.pose, current_pose_);
     tf::vectorMsgToEigen(current_odom_.twist.twist.linear, current_velocity_);
     yaw_ = tf::getYaw(current_odom_.pose.pose.orientation);
-    std::cout << "\n[Debug] yaw from odom: " << yaw_ << "\n";
+    std::cout << "\n[Debug] yaw from odom: " << degreeOf(yaw_) << "\n";
 }
 
 // void OffboardControl::enuPoseCallback(const geometry_msgs::PoseStamped::ConstPtr& msg)
@@ -232,7 +232,7 @@ void OffboardControl::gpsPositionCallback(const sensor_msgs::NavSatFix::ConstPtr
 void OffboardControl::optPointCallback(const geometry_msgs::Point::ConstPtr& msg)
 {
     opt_point_ = *msg;
-    // optimization_point_.push_back(*msg);
+    optimization_point_.push_back(*msg);
     opt_point_received_ = true;
 }
 
@@ -718,7 +718,6 @@ void OffboardControl::inputPlanner()
 void OffboardControl::plannerFlight()
 {
     bool first_target_reached = false;
-    bool target_reached = false;
     bool final_reached = false;
     geometry_msgs::PoseStamped setpoint;
     ros::Rate rate(50.0);
@@ -731,8 +730,7 @@ void OffboardControl::plannerFlight()
         target_enu_pose_ = targetTransfer(current_odom_.pose.pose.position.x+components_vel_.x, current_odom_.pose.pose.position.y+components_vel_.y, current_odom_.pose.pose.position.z+components_vel_.z);
         target_enu_pose_.header.stamp = ros::Time::now();
         setpoint_pose_pub_.publish(target_enu_pose_);
-        // first_target_reached = checkPositionError(target_error_, current_enu_pose_, setpoint);
-        first_target_reached = checkPositionError(target_error_, targetTransfer(current_odom_.pose.pose.position.x, current_odom_.pose.pose.position.y, current_odom_.pose.pose.position.z), setpoint);
+        first_target_reached = checkPositionError(target_error_, setpoint);
         if(first_target_reached)
         {
             std::printf("\n[ INFO] Reached start point of Optimization path\n");
@@ -747,36 +745,40 @@ void OffboardControl::plannerFlight()
     if(opt_point_received_)
     {
         std::printf("[ INFO] Fly with optimization points\n");
+        double last_alpha, curr_alpha, delta_alpha;
         while(ros::ok())
         {
             setpoint = targetTransfer(x_target_[num_of_enu_target_-1], y_target_[num_of_enu_target_-1], z_target_[num_of_enu_target_-1]);
-            // target_enu_pose_ = targetTransfer(optimization_point_.front().x, optimization_point_.front().y, optimization_point_.front().z);
-            if(((ros::Time::now() - current_time) >= ros::Duration(10)) && ((ros::Time::now() - current_time) <= ros::Duration(12)))
-            {
-                target_enu_pose_ = targetTransfer(opt_point_.x, opt_point_.y, opt_point_.z, 90.0);
-            }
-            else if((ros::Time::now() - current_time) >= ros::Duration(20))
-            {
-                target_enu_pose_ = targetTransfer(opt_point_.x, opt_point_.y, opt_point_.z, 180.0);
-            }
-            else
-            {
-                // target_enu_pose_ = targetTransfer(opt_point_.x, opt_point_.y, opt_point_.z);
-                target_enu_pose_.pose.position.x = opt_point_.x;
-                target_enu_pose_.pose.position.y = opt_point_.y;
-                target_enu_pose_.pose.position.z = opt_point_.z;
-            }
             
+            // if(((ros::Time::now() - current_time) >= ros::Duration(10)) && ((ros::Time::now() - current_time) <= ros::Duration(12)))
+            // {
+            //     target_enu_pose_ = targetTransfer(opt_point_.x, opt_point_.y, opt_point_.z, 90.0);
+            // }
+            // else if((ros::Time::now() - current_time) >= ros::Duration(20))
+            // {
+            //     target_enu_pose_ = targetTransfer(opt_point_.x, opt_point_.y, opt_point_.z, 180.0);
+            // }
+            // else
+            // {
+            //     // target_enu_pose_ = targetTransfer(opt_point_.x, opt_point_.y, opt_point_.z);
+            //     target_enu_pose_.pose.position.x = opt_point_.x;
+            //     target_enu_pose_.pose.position.y = opt_point_.y;
+            //     target_enu_pose_.pose.position.z = opt_point_.z;
+            // }
+            
+            curr_alpha = calculateYawOffset(targetTransfer(current_odom_.pose.pose.position.x, current_odom_.pose.pose.position.y, current_odom_.pose.pose.position.z), targetTransfer(opt_point_.x, opt_point_.y, opt_point_.z));
+
+            target_enu_pose_.pose.orientation = tf::createQuaternionMsgFromYaw(curr_alpha);
+
+            target_enu_pose_.pose.position.x = opt_point_.x; 
+            target_enu_pose_.pose.position.y = opt_point_.y; 
+            target_enu_pose_.pose.position.z = opt_point_.z; 
+
             target_enu_pose_.header.stamp = ros::Time::now();
             setpoint_pose_pub_.publish(target_enu_pose_);
-            // target_reached = checkPositionError(0.1, current_enu_pose_, targetTransfer(optimization_point_.front().x, optimization_point_.front().y, optimization_point_.front().z));
-            // final_reached = checkPositionError(target_error_, current_enu_pose_, setpoint);
-            final_reached = checkPositionError(target_error_, targetTransfer(current_odom_.pose.pose.position.x, current_odom_.pose.pose.position.y, current_odom_.pose.pose.position.z), setpoint);
-            // if(target_reached && !final_reached)
-            // {
-                // optimization_point_.erase(optimization_point_.begin());
-            // }
-            // if(target_reached && final_reached)
+            
+            final_reached = checkPositionError(target_error_, setpoint);
+            
             if(final_reached)
             {
                 // std::printf("\n[ INFO] Reached Final position: [%.1f, %.1f, %.1f]\n", current_enu_pose_.pose.position.x, current_enu_pose_.pose.position.y, current_enu_pose_.pose.position.z); 
@@ -798,7 +800,6 @@ void OffboardControl::plannerFlight()
                 }
                 break;
             }
-            // current_time = ros::Time::now();
             ros::spinOnce();
             rate.sleep();
         }
@@ -810,6 +811,94 @@ void OffboardControl::plannerFlight()
         landing(targetTransfer(current_odom_.pose.pose.position.x, current_odom_.pose.pose.position.y, 0.0));
     }
 }
+
+// void OffboardControl::plannerFlight()
+// {
+//     bool first_target_reached = false;
+//     bool target_reached = false;
+//     bool final_reached = false;
+//     geometry_msgs::PoseStamped setpoint;
+//     ros::Rate rate(50.0);
+//     while(ros::ok())
+//     {
+//         setpoint = targetTransfer(x_target_[0], y_target_[0], z_target_[0]);
+//         components_vel_ = velComponentsCalc(vel_desired_, targetTransfer(current_odom_.pose.pose.position.x, current_odom_.pose.pose.position.y, current_odom_.pose.pose.position.z), setpoint);
+//         target_enu_pose_ = targetTransfer(current_odom_.pose.pose.position.x+components_vel_.x, current_odom_.pose.pose.position.y+components_vel_.y, current_odom_.pose.pose.position.z+components_vel_.z);
+//         target_enu_pose_.header.stamp = ros::Time::now();
+//         setpoint_pose_pub_.publish(target_enu_pose_);
+//         first_target_reached = checkPositionError(target_error_, targetTransfer(current_odom_.pose.pose.position.x, current_odom_.pose.pose.position.y, current_odom_.pose.pose.position.z), setpoint);
+//         if(first_target_reached)
+//         {
+//             std::printf("\n[ INFO] Reached start point of Optimization path\n");
+//             hovering(targetTransfer(current_odom_.pose.pose.position.x, current_odom_.pose.pose.position.y, current_odom_.pose.pose.position.z), 0.5);
+//             break;
+//         }
+//         ros::spinOnce();
+//         rate.sleep();
+//     }
+//     ros::Time current_time = ros::Time::now();
+//     if(opt_point_received_)
+//     {
+//         std::printf("[ INFO] Fly with optimization points\n");
+//         double last_alpha = 0.0;
+//         double curr_alpha, delta_alpha;
+//         while(ros::ok())
+//         {
+//             setpoint = targetTransfer(x_target_[num_of_enu_target_-1], y_target_[num_of_enu_target_-1], z_target_[num_of_enu_target_-1]);
+            
+//             curr_alpha = calculateYawOffset(targetTransfer(current_odom_.pose.pose.position.x, current_odom_.pose.pose.position.y, current_odom_.pose.pose.position.z), targetTransfer(optimization_point_.front().x, optimization_point_.front().y, optimization_point_.front().z));
+//             delta_alpha = yaw_ - curr_alpha;
+
+//             target_enu_pose_.pose.orientation = tf::createQuaternionMsgFromYaw(yaw_ + delta_alpha);
+
+//             target_enu_pose_.pose.position.x = optimization_point_.front().x;
+//             target_enu_pose_.pose.position.y = optimization_point_.front().y;
+//             target_enu_pose_.pose.position.z = optimization_point_.front().z;
+
+//             target_enu_pose_.header.stamp = ros::Time::now();
+//             setpoint_pose_pub_.publish(target_enu_pose_);
+            
+//             target_reached = checkPositionError(0.1, targetTransfer(optimization_point_.front().x, optimization_point_.front().y, optimization_point_.front().z));
+
+//             final_reached = checkPositionError(target_error_, setpoint);
+            
+//             if(target_reached && !final_reached)
+//             {
+//                 optimization_point_.erase(optimization_point_.begin());
+//             }
+//             else if(target_reached && final_reached)
+//             {
+//                 std::printf("\n[ INFO] Reached Final position: [%.1f, %.1f, %.1f]\n", current_odom_.pose.pose.position.x, current_odom_.pose.pose.position.y, current_odom_.pose.pose.position.z); 
+//                 hovering(setpoint, hover_time_);
+//                 if(!return_home_mode_enable_)
+//                 {
+//                     landing(targetTransfer(setpoint.pose.position.x, setpoint.pose.position.y, 0.0));
+//                 }
+//                 else
+//                 {
+//                     if(delivery_mode_enable_)
+//                     {
+//                         delivery(targetTransfer(setpoint.pose.position.x, setpoint.pose.position.y, z_delivery_), unpack_time_);
+//                     }
+//                     std::printf("\n[ INFO] Returning home [%.1f, %.1f, %.1f]\n",home_enu_pose_.pose.position.x, home_enu_pose_.pose.position.y, home_enu_pose_.pose.position.z);
+//                     returnHome(targetTransfer(home_enu_pose_.pose.position.x, home_enu_pose_.pose.position.y, setpoint.pose.position.z));
+//                     landing(home_enu_pose_);
+//                 }
+//                 break;
+//             }
+//             else
+//             {
+//                 ros::spinOnce();
+//                 rate.sleep();
+//             }
+//         }
+//     }
+//     else
+//     {
+//         std::printf("\n[ WARN] Not received optimization points! Landing\n");
+//         landing(targetTransfer(current_odom_.pose.pose.position.x, current_odom_.pose.pose.position.y, 0.0));
+//     }
+// }
 
 // void OffboardControl::plannerFlight()
 // {
@@ -949,6 +1038,20 @@ void OffboardControl::plannerFlight()
 //         landing(targetTransfer(current_enu_pose_.pose.position.x, current_enu_pose_.pose.position.y, 0.0));
 //     }
 // }
+
+double OffboardControl::calculateYawOffset(geometry_msgs::PoseStamped current, geometry_msgs::PoseStamped setpoint)
+{
+    double alpha;
+    double xc = current.pose.position.x;
+    double yc = current.pose.position.y;
+    double xs = setpoint.pose.position.x;
+    double ys = setpoint.pose.position.y;
+    
+    alpha = atan2(ys-yc, xs-xc);
+    std::cout << "\n[Debug] delta yaw " << alpha << "\n";
+    std::cout << "\n[Debug] delta yaw " << degreeOf(alpha) << "\n";
+    return alpha;
+}
 
 // input: setpoint to takeoff and hover time
 void OffboardControl::takeOff(geometry_msgs::PoseStamped setpoint, double hover_time)

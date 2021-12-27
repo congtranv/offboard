@@ -144,6 +144,7 @@ class OffboardControl
 	void gpsFlight();
 	void inputPlanner();
 	void plannerFlight();
+	double calculateYawOffset(geometry_msgs::PoseStamped current, geometry_msgs::PoseStamped setpoint);
 
 	void takeOff(geometry_msgs::PoseStamped setpoint, double hover_time);
 	void hovering(geometry_msgs::PoseStamped setpoint, double hover_time);

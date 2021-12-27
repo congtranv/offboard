@@ -48,15 +48,42 @@
 ### <span style="color:green">Refer the [test_case.md](test_case.md) for all detail use cases of OFFBOARD node
 
 ### <span style="color:yellow">1. Simulation (SITL)
+
 #### <span style="color:cyan">1.1 Run PX4 simulation
 ```
 roslaunch px4 mavros_posix_sitl.launch
 ```
+***
+  In this terminal, to run OFFBOARD Mission with Delivery mode *(landing at each setpoint)*
+
+  run  `param set COM_DISARM_LAND -1`  to disable auto disarm when land of pixhawk:
+  ```
+  pxh> param set COM_DISARM_LAND -1
+  ```
+  When done, set `COM_DISARM_LAND` to `2` for enable auto disarm after land 2 seconds:
+  ```
+  pxh> param set COM_DISARM_LAND 2
+  ```
+***
 #### <span style="color:cyan">1.2 Run OFFBOARD node
 ```
 roslaunch offboard offboard.launch simulation:=true
 ```
+
+If forgot parameter `simulation`, can use setmode node (in another terminal)
+```
+rosrun offboard setmode_offb
+```
+*(maybe have to run twice for ARM and Switch OFFBOARD mode)*
 ### <span style="color:yellow">2. Practice in test field
+
+***
+  Before run OFFBOARD Mission with Delivery mode *(landing at each setpoint)*, use [QGround Control](https://github.com/congtranv/px4-param/blob/main/QGroundControl.AppImage) to set parameter `COM_DISARM_LAND` to `-1`*(disable)* for disable auto disarm when drone landed. 
+  
+  **Use Remote controller to DISARM when mission completed**
+
+  When practice done, **HAVE TO** set `COM_DISARM_LAND` to `2` for enable auto DISARM when drone landed after 2 seconds.
+***
 
 ##### <span style="color:green">***(can use for HITL simulation)***
 

@@ -23,6 +23,8 @@
 #include<cstdio>
 #include<vector>
 
+#include<offboard/traj_gen.h>
+
 class OffboardControl
 {
   public:
@@ -55,11 +57,13 @@ class OffboardControl
 	ros::ServiceClient set_mode_client_; // set OFFBOARD mode in simulation
 	ros::ServiceClient arming_client_; // call arm command in simulation
 
+	nav_msgs::Odometry current_odom_;
+	// geometry_msgs::PoseStamped current_pose_from_odom_;
+	// geometry_msgs::TwistStamped current_body_vel_;
 	mavros_msgs::State current_state_;
 	geometry_msgs::PoseStamped current_enu_pose_;
 	geometry_msgs::PoseStamped home_enu_pose_;
 	geometry_msgs::PoseStamped target_enu_pose_;
-	geometry_msgs::TwistStamped current_body_vel_;
 	geometry_msgs::Point opt_point_;
 	std::vector<geometry_msgs::Point> optimization_point_;
 	sensor_msgs::NavSatFix current_gps_position_;
@@ -71,7 +75,8 @@ class OffboardControl
 
 	bool opt_point_received_ = false;
 	bool gps_received_ = false; 
-	bool final_position_reached_ = false; // true = reach final setpoint || false = other setpoints
+	bool final_position_reached_ = false; 
+	bool odom_received_ = false;
 	bool delivery_mode_enable_;
 	bool simulation_mode_enable_;
 	bool return_home_mode_enable_;
@@ -105,6 +110,7 @@ class OffboardControl
 	void waitForArmAndOffboard(double hz);
 	void waitForStable(double hz);
 	void stateCallback(const mavros_msgs::State::ConstPtr& msg);
+	void odomCallback(const nav_msgs::Odometry::ConstPtr& msg);
 	void enuPoseCallback(const geometry_msgs::PoseStamped::ConstPtr& msg);
 	void gpsPositionCallback(const sensor_msgs::NavSatFix::ConstPtr& msg);
 	void velocityBodyCallback(const geometry_msgs::TwistStamped::ConstPtr& msg);
@@ -147,10 +153,13 @@ class OffboardControl
 	
 	sensor_msgs::NavSatFix goalTransfer(double lat, double lon, double alt); // transfer lat, lon, alt setpoint to same message type with gps setpoint msg
 	geometry_msgs::PoseStamped targetTransfer(double x, double y, double z); // transfer x, y, z setpoint to same message type with enu setpoint msg
-	geometry_msgs::PoseStamped targetTransfer(double x, double y, double z, double yaw); // transfer x, y, z, and yaw setpoint to same message type with enu setpoint msg
+	geometry_msgs::PoseStamped targetTransfer(double x, double y, double z, double yaw); // transfer x, y, z (meter) and yaw (degree) setpoint to same message type with enu setpoint msg
 
+	bool checkPositionError(double error, geometry_msgs::PoseStamped target);
 	bool checkPositionError(double error, geometry_msgs::PoseStamped current, geometry_msgs::PoseStamped target);
 	bool checkOrientationError(double error, geometry_msgs::PoseStamped current, geometry_msgs::PoseStamped target);
+
+	bool checkGPSError(double error, sensor_msgs::NavSatFix current, sensor_msgs::NavSatFix goal);
 
 	Eigen::Vector3d getRPY(geometry_msgs::Quaternion quat);
 	// geometry_msgs::Quaternion getQuaternionMsg(double roll, double pitch, double yaw);

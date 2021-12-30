@@ -54,9 +54,10 @@
 roslaunch px4 mavros_posix_sitl.launch
 ```
 ***
-  In this terminal, to run OFFBOARD Mission with Delivery mode *(landing at each setpoint)*
+  If run OFFBOARD Mission with Delivery mode *(landing at each setpoint)* -
+(`roslaunch offboard offboard.launch simulation:=true delivery:=true z_delivery:=0.0`)
 
-  run  `param set COM_DISARM_LAND -1`  to disable auto disarm when land of pixhawk:
+  In this terminal (Run PX4 simulation), run  `param set COM_DISARM_LAND -1`  to disable auto disarm when land of pixhawk:
   ```
   pxh> param set COM_DISARM_LAND -1
   ```
@@ -78,7 +79,7 @@ rosrun offboard setmode_offb
 ### <span style="color:yellow">2. Practice in test field
 
 ***
-  Before run OFFBOARD Mission with Delivery mode *(landing at each setpoint)*, use [QGround Control](https://github.com/congtranv/px4-param/blob/main/QGroundControl.AppImage) to set parameter `COM_DISARM_LAND` to `-1`*(disable)* for disable auto disarm when drone landed. 
+  Before run OFFBOARD Mission with Delivery mode *(landing at each setpoint)* (`roslaunch offboard offboard.launch delivery:=true z_delivery:=0.0`), use [QGround Control](https://github.com/congtranv/px4-param/blob/main/QGroundControl.AppImage) to set parameter `COM_DISARM_LAND` to `-1`*(disable)* for disable auto disarm when drone landed. 
   
   **Use Remote controller to DISARM when mission completed**
 

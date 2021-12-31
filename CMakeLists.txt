@@ -8,6 +8,7 @@ find_package(catkin REQUIRED COMPONENTS
   roslaunch
   rospy
   std_msgs
+  nav_msgs
   mav_trajectory_generation 
   mav_trajectory_generation_ros
   message_generation
@@ -27,7 +28,7 @@ generate_messages(
 catkin_package(
    INCLUDE_DIRS include
 #  LIBRARIES offboard
-   CATKIN_DEPENDS geometry_msgs mavros_msgs roscpp rospy std_msgs mav_trajectory_generation mav_trajectory_generation_ros message_runtime
+   CATKIN_DEPENDS geometry_msgs mavros_msgs roscpp rospy std_msgs nav_msgs mav_trajectory_generation mav_trajectory_generation_ros message_runtime
 #  DEPENDS system_lib
 )
 

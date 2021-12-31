@@ -1,44 +1,80 @@
 # IVSR OFFBOARD package
 
 ***
-## <span style="color:red">!!! WARNING
+## !!! WARNING
 
-<span style="color:yellow">__*OFFBOARD* control is dangerous.__
+__*OFFBOARD* control is dangerous.__
 
-<span style="color:yellow">**If you are operating on a real vehicle be sure to have a way of gaining back manual control in case something goes wrong.**
+**If you are operating on a real vehicle be sure to have a way of gaining back manual control in case something goes wrong.**
 ***
 
 ## Contain
-- <span style="color:orange">*include/offboard/offboard.h*</span> : header offboard
+- *include/offboard/offboard.h*: header offboard
 
-- <span style="color:orange">*src/offboard_node.cpp*</span>   : offboard node source code
-- <span style="color:orange">*src/offboard_lib.cpp*</span>    : library for offboard node
-- <span style="color:orange">*src/setmode_offb.cpp*</span>    : set OFFBOARD mode and ARM vehicle in simulation
-- <span style="color:orange">*launch/offboard.launch*</span>  : launch file, include parameter
+- *src/offboard_node.cpp*: offboard node source code
+- *src/offboard_lib.cpp*: library for offboard node
+- *src/setmode_offb.cpp*: set OFFBOARD mode and ARM vehicle in simulation
+- *launch/offboard.launch*: launch file, include parameter
 
 ## Required
-- <span style="color:orange">**ROS**</span>             : tested on ROS Melodic (Ubuntu 18.04)
-- <span style="color:orange">**PX4 Firmware**</span>    : tested on v10.0.1 - setup [here](https://github.com/congtranv/px4_install)
-- <span style="color:orange">**Catkin workspace**</span>: `catkin_ws`
+
+### Environments
+- **ROS**: tested on [ROS Melodic](http://wiki.ros.org/melodic/Installation/Ubuntu) (Ubuntu 18.04)
+- **PX4 Firmware**: tested on v10.0.1 - setup [here](https://github.com/congtranv/px4_install)
+- **Catkin workspace**: `catkin_ws`
   ```
   ## create a workspace if you've not had one
   mkdir -p [path/to/ws]/catkin_ws/src
   cd [path/to/ws]/catkin_ws
-  catkin_init_workspace
-  rosdep install --from-paths src --ignore-src -y 
+  ```
+  ```
+  catkin init
+  catkin config --extend /opt/ros/melodic
+  catkin config --cmake-args -DCMAKE_BUILD_TYPE=Release
+  catkin config --merge-devel
   catkin build
   ```
-- <span style="color:orange">**MAVROS**</span>          : binary installation - setup [here](https://docs.px4.io/master/en/ros/mavros_installation.html#binary-installation-debian-ubuntu)
+- **MAVROS**: binary installation - setup [here](https://docs.px4.io/master/en/ros/mavros_installation.html#binary-installation-debian-ubuntu)
 
-- <span style="color:orange">**OFFBOARD**</span>
-  ```
-  cd [path/to/ws]/catkin_ws/src
-  git clone https://github.com/congtranv/offboard.git
-  cd [path/to/ws]/catkin_ws
-  catkin build offboard
-  ```
+### [ethz-asl/mav_trajectory_generation](https://github.com/ethz-asl/mav_trajectory_generation) 
+
+```
+cd [path/to/ws]/catkin_ws/src
+```
+```
+git clone https://github.com/catkin/catkin_simple.git
+git clone https://github.com/ethz-asl/eigen_catkin.git
+git clone https://github.com/ethz-asl/eigen_checks.git
+git clone https://github.com/ethz-asl/nlopt.git
+git clone https://github.com/ethz-asl/glog_catkin.git
+git clone https://github.com/ethz-asl/mav_comm.git
+git clone https://github.com/ethz-asl/yaml_cpp_catkin.git
+git clone https://github.com/ethz-asl/mav_trajectory_generation.git
+```
+```
+cd [path/to/ws]/catkin_ws
+```
+```
+catkin build
+```
+### [congtranv/offboard](https://github.com/congtranv/offboard)
+```
+cd [path/to/ws]/catkin_ws/src
+```
+```
+git clone https://github.com/congtranv/offboard.git
+```
+```
+cd [path/to/ws]/catkin_ws
+```
+```
+catkin build offboard
+```
 
 ## Usage
+***
+**IVSR Tutorial: Read from  [onedrive](https://husteduvn-my.sharepoint.com/:w:/g/personal/quang_nguyenanh_hust_edu_vn/EdFUubKnGGFOuTbTw5xGu3IB2g8LsIFqIswVKiPCkyMmTw?e=uTuyDv)**
+***
 ***
 ### <span style="color:green">*Before run OFFBOARD node, check and modify (if need) the value of parameters in* **launch/offboard.launch**
 ***
@@ -98,3 +134,4 @@ roslaunch offboard offboard.launch
 ```
 #### <span style="color:cyan">2.3 ARM and switch to OFFBOARD mode
 Use Remote controller to ARM and switch flight mode to OFFBOARD
+

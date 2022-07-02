@@ -1,24 +1,24 @@
 <launch>
-    <arg name="delivery" default="false"/>
+	<arg name="delivery" default="false"/>
     <arg name="simulation" default="false"/>
     <arg name="return_home" default="false"/>
     <arg name="desired_velocity" default="0.3"/>
     <arg name="hover_time" default="10.0"/>
     <arg name="unpack_time" default="15.0"/>
-    <arg name="z_delivery" default="0.5"/>
   
-    <!-- <rosparam command="load" file="$(find offboard)/config/config.yaml" /> -->
     <node name="offboard_node" pkg="offboard" type="offboard_node" output="screen">
         <param name="delivery_mode_enable" type="bool" value="$(arg delivery)"/>
         <param name="simulation_mode_enable" type="bool" value="$(arg simulation)"/>
         <param name="return_home_mode_enable" type="bool" value="$(arg return_home)"/>
         
-        <param name="number_of_target" type="int" value="4"/>
+        <param name="number_of_target" type="int" value="5"/>
         <param name="target_error" type="double" value="0.1"/>
-        <rosparam param="target_x_pos">[0.0, 6.0, 6.0, 0.0]</rosparam>
+        <!-- <rosparam param="target_x_pos">[0.0, 6.0, 6.0, 0.0]</rosparam>
         <rosparam param="target_y_pos">[0.0, 0.0, 6.0, 6.0]</rosparam>
-        <rosparam param="target_z_pos">[5.0, 5.0, 5.0, 5.0]</rosparam>
-        <rosparam param="target_yaw">[0.0, 90.0, 180.0, 270.0]</rosparam>
+        <rosparam param="target_z_pos">[5.0, 5.0, 5.0, 5.0]</rosparam> -->
+        <rosparam param="target_x_pos">[1.0, 5.0, -5.0, 5.0, -5.0]</rosparam>
+        <rosparam param="target_y_pos">[0.0, -5.0, -2.5, 2.5, 5.0]</rosparam>
+        <rosparam param="target_z_pos">[1.0, 1.0, 2.0, 3.0, 4.0]</rosparam>
         <param name="number_of_goal" type="int" value="3"/>
         <param name="goal_error" type="double" value="0.2"/>
         <rosparam param="latitude">[21.0065275, 21.0065305, 21.0065295]</rosparam>
@@ -26,7 +26,6 @@
         <rosparam param="altitude">[7.0, 7.0, 7.0]</rosparam>
 
         <param name="z_takeoff" type="double" value="3.0"/>
-        <param name="z_delivery" type="double" value="$(arg z_delivery)"/>
         <param name="land_error" type="double" value="0.1"/>
         <param name="takeoff_hover_time" type="double" value="5.0"/>
         <param name="hover_time" type="double" value="$(arg hover_time)"/>
@@ -36,4 +35,11 @@
         <param name="return_velcity" type="double" value="0.7"/>
 
     </node>
+	<!-- <node name="points_and_lines" pkg="ros_viz" type="marker_node"/> -->
+	<!-- <node name="spline_optimization_example" pkg="ewok_optimization" type="spline_optimization_example3">
+		<rosparam param="x_pos">[1.0, 5.0, -5.0, 5.0, -5.0]</rosparam>
+        <rosparam param="y_pos">[0.0, -5.0, -2.5, 2.5, 5.0]</rosparam>
+        <rosparam param="z_pos">[1.0, 1.0, 2.0, 3.0, 4.0]</rosparam>
+		<param name="number_of_target" type="int" value="5"/>
+	</node> -->
 </launch>

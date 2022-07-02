@@ -1,106 +1,137 @@
-# ivsr offboard package
+# IVSR OFFBOARD package
 
 ***
-**WARNING**
+## !!! WARNING
 
-*OFFBOARD* control is dangerous. If you are operating on a real vehicle be sure to have a way of gaining back manual control in case something goes wrong.
+__*OFFBOARD* control is dangerous.__
+
+**If you are operating on a real vehicle be sure to have a way of gaining back manual control in case something goes wrong.**
 ***
 
-## contain
-- *include/offboard/offboard.h* : header offboard
+## Contain
+- *include/offboard/offboard.h*: header offboard
 
-- *src/hover_node.cpp*      : keep drone hovering on input z height
-- *src/offboard_node.cpp*   : initial ros node
-- *src/offboard_lib.cpp*    : library for offboard node
-- *src/setmode_offb.cpp*    : set OFFBOARD mode and ARM vehicle in simulation
+- *src/offboard_node.cpp*: offboard node source code
+- *src/offboard_lib.cpp*: library for offboard node
+- *src/setmode_offb.cpp*: set OFFBOARD mode and ARM vehicle in simulation
+- *launch/offboard.launch*: launch file, include parameter
 
-- *config/waypoints.yaml*   : prepared params to load into offboard node
-- *package.xml*             : ros manifests
-- *CMakeLists.txt*          : CMakeLists
+## Required
 
-## required
-- **ros**             : tested on Melodic (Ubuntu 18.04)
-- **PX4**             : tested on v10.0.1 
-- **catkin workspace**: `catkin_ws`
-- **mavros**          : binary installation [here](https://docs.px4.io/master/en/ros/mavros_installation.html#binary-installation-debian-ubuntu)
-
-- **git clone `offboard` to `catkin_ws/src/` and build `catkin build`**
-
-## usage
-
-### 1. HOVERING node
-#### 1.1 CONNECT TO PIXHAWK
-##### 1.1.1 Practice on jetson
-- **connect jetson to pixhawk** (*replace fcu_url with your own config*)
-
+### Environments
+- **ROS**: tested on [ROS Melodic](http://wiki.ros.org/melodic/Installation/Ubuntu) (Ubuntu 18.04)
+- **PX4 Firmware**: tested on v10.0.1 - setup [here](https://github.com/congtranv/px4_install)
+- **Catkin workspace**: `catkin_ws`
   ```
-  roslaunch mavros px4.launch fcu_url:=/dev/ttyTHS1:921600
+  ## create a workspace if you've not had one
+  mkdir -p [path/to/ws]/catkin_ws/src
+  cd [path/to/ws]/catkin_ws
   ```
-##### 1.1.2 run simulation
-- **run px4 simulation with mavros connected**
+  ```
+  catkin init
+  catkin config --extend /opt/ros/melodic
+  catkin config --cmake-args -DCMAKE_BUILD_TYPE=Release
+  catkin config --merge-devel
+  catkin build
+  ```
+- **MAVROS**: binary installation - setup [here](https://docs.px4.io/master/en/ros/mavros_installation.html#binary-installation-debian-ubuntu)
 
-  ```
-  roslaunch px4 mavros_posix_sitl.launch
-  ```
-#### 1.2 run *hover_node*: 
+### [ethz-asl/mav_trajectory_generation](https://github.com/ethz-asl/mav_trajectory_generation) 
 
-  ```
-  rosrun offboard hover
-  ```
-- **check current position on screen**
+```
+cd [path/to/ws]/catkin_ws/src
+```
+```
+git clone https://github.com/catkin/catkin_simple.git
+git clone https://github.com/ethz-asl/eigen_catkin.git
+git clone https://github.com/ethz-asl/eigen_checks.git
+git clone https://github.com/ethz-asl/nlopt.git
+git clone https://github.com/ethz-asl/glog_catkin.git
+git clone https://github.com/ethz-asl/mav_comm.git
+git clone https://github.com/ethz-asl/yaml_cpp_catkin.git
+git clone https://github.com/ethz-asl/mav_trajectory_generation.git
+```
+```
+cd [path/to/ws]/catkin_ws
+```
+```
+catkin build
+```
+### [congtranv/offboard](https://github.com/congtranv/offboard)
+```
+cd [path/to/ws]/catkin_ws/src
+```
+```
+git clone https://github.com/congtranv/offboard.git
+```
+```
+cd [path/to/ws]/catkin_ws
+```
+```
+catkin build offboard
+```
 
-  **input target height for hovering (in meter): z**
+## Usage
+***
+**IVSR Tutorial: Read from  [onedrive](https://husteduvn-my.sharepoint.com/:w:/g/personal/quang_nguyenanh_hust_edu_vn/EdFUubKnGGFOuTbTw5xGu3IB2g8LsIFqIswVKiPCkyMmTw?e=uTuyDv)**
+***
+***
+### <span style="color:green">*Before run OFFBOARD node, check and modify (if need) the value of parameters in* **launch/offboard.launch**
+***
+### There 2 main functions:
+- <span style="color:violet">HOVERING</span>: drone hover at `z` meters (input from keyboard) in `hover_time` seconds (change in launch/offboard.launch)
+- <span style="color:violet">MISSION</span>: fly with the local/GPS setpoints that prepared in launch/offboard.launch or input from keyboard
+### <span style="color:green">Refer the [test_case.md](test_case.md) for all detail use cases of OFFBOARD node
 
-#### 1.3 ARM and switch mode 
-- **on remote controller** switch to ARM, then switch flight mode to OFFBOARD
+### <span style="color:yellow">1. Simulation (SITL)
 
-  on simualation: 
-  
-  ```
-  rosrun offboard setmode_offb
-  ```
-### 2. OFFBOARD node
-#### 2.1 CONNECT TO PIXHAWK
-##### 2.1.1 Practice on jetson
-- **connect jetson to pixhawk** (*replace fcu_url with your own config*)
-  ***
-  before run offboard with landing at each setpoint, use [QGround Control](https://github.com/congtranv/px4-param/blob/main/QGroundControl.AppImage) to set `COM_DISARM_LAND` to `-1`*(disable)* for disable auto disarm when land of pixhawk.
+#### <span style="color:cyan">1.1 Run PX4 simulation
+```
+roslaunch px4 mavros_posix_sitl.launch
+```
+***
+  If run OFFBOARD Mission with Delivery mode *(landing at each setpoint)* -
+(`roslaunch offboard offboard.launch simulation:=true delivery:=true z_delivery:=0.0`)
 
-  when practice done, set `COM_DISARM_LAND` to `2` for enable auto disarm after land 2 seconds.
-  ***
-  connect:
-
-  ```
-  roslaunch mavros px4.launch fcu_url:=/dev/ttyTHS1:921600
-  ```
-##### 2.1.2 run simulation
-- **run px4 simulation with mavros connected**
-
-  ```
-  roslaunch px4 mavros_posix_sitl.launch
-  ```
-  ***
-  in this terminal, run  `param set COM_DISARM_LAND -1`  to disable auto disarm when land of pixhawk:
+  In this terminal (Run PX4 simulation), run  `param set COM_DISARM_LAND -1`  to disable auto disarm when land of pixhawk:
   ```
   pxh> param set COM_DISARM_LAND -1
   ```
-  when practice done, set COM_DISARM_LAND to 2 for enable auto disarm after land 2 seconds:
+  When done, set `COM_DISARM_LAND` to `2` for enable auto disarm after land 2 seconds:
   ```
   pxh> param set COM_DISARM_LAND 2
   ```
-  ***
-#### 2.2 run *offboard_node*: 
+***
+#### <span style="color:cyan">1.2 Run OFFBOARD node
+```
+roslaunch offboard offboard.launch simulation:=true
+```
 
-  ```
-  roslaunch offboard offboard.launch
-  ```
-- **manual input or load input from config/config.yaml config file**
-  
-#### 2.3 ARM and switch mode
-- **on remote controller** switch to ARM, then switch flight mode to OFFBOARD
+If forgot parameter `simulation`, can use setmode node (in another terminal)
+```
+rosrun offboard setmode_offb
+```
+*(maybe have to run twice for ARM and Switch OFFBOARD mode)*
+### <span style="color:yellow">2. Practice in test field
 
-- on simualation: 
+***
+  Before run OFFBOARD Mission with Delivery mode *(landing at each setpoint)* (`roslaunch offboard offboard.launch delivery:=true z_delivery:=0.0`), use [QGround Control](https://github.com/congtranv/px4-param/blob/main/QGroundControl.AppImage) to set parameter `COM_DISARM_LAND` to `-1`*(disable)* for disable auto disarm when drone landed. 
   
-  ```
-  rosrun offboard setmode_offb
-  ```
+  **Use Remote controller to DISARM when mission completed**
+
+  When practice done, **HAVE TO** set `COM_DISARM_LAND` to `2` for enable auto DISARM when drone landed after 2 seconds.
+***
+
+##### <span style="color:green">***(can use for HITL simulation)***
+
+#### <span style="color:cyan">2.1 Connect Companion PC to Pixhawk 4 
+```
+roslaunch mavros px4.launch fcu_url:=/dev/ttyTHS1:921600
+```
+#### <span style="color:cyan">2.2 Run OFFBOARD node
+```
+roslaunch offboard offboard.launch
+```
+#### <span style="color:cyan">2.3 ARM and switch to OFFBOARD mode
+Use Remote controller to ARM and switch flight mode to OFFBOARD
+

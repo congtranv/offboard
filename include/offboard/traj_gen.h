@@ -1,21 +1,21 @@
 #ifndef TRAJ_GEN_H_
 #define TRAJ_GEN_H_
 
-#include<mav_trajectory_generation/polynomial_optimization_nonlinear.h>
-#include<mav_trajectory_generation/trajectory.h>
-#include<mav_trajectory_generation_ros/ros_visualization.h>
-#include<mav_trajectory_generation_ros/ros_conversions.h>
-#include<ros/ros.h>
-#include<visualization_msgs/Marker.h> 
-#include<visualization_msgs/MarkerArray.h>
-#include<geometry_msgs/PoseStamped.h>
-#include<nav_msgs/Odometry.h>
-#include<tf/tf.h>
-#include<tf/transform_datatypes.h>
-#include<eigen_conversions/eigen_msg.h>
-// #include<offboard/FlatTarget.h>
-#include<std_msgs/Float32.h>
-#include<vector>
+#include <mav_trajectory_generation/polynomial_optimization_nonlinear.h>
+#include <mav_trajectory_generation/trajectory.h>
+#include <mav_trajectory_generation_ros/ros_visualization.h>
+#include <mav_trajectory_generation_ros/ros_conversions.h>
+#include <ros/ros.h>
+#include <visualization_msgs/Marker.h> 
+#include <visualization_msgs/MarkerArray.h>
+#include <geometry_msgs/PoseStamped.h>
+#include <nav_msgs/Odometry.h>
+#include <tf/tf.h>
+#include <tf/transform_datatypes.h>
+#include <eigen_conversions/eigen_msg.h>
+// #include <offboard/FlatTarget.h>
+#include <std_msgs/Float32.h>
+#include <vector>
 
 double max_v_;
 double max_a_;
@@ -52,8 +52,8 @@ const int derivative_to_optimize_ = mav_trajectory_generation::derivative_order:
 mav_trajectory_generation::NonlinearOptimizationParameters parameters_;
 mav_trajectory_generation::Trajectory trajectory_;
 
-void odomCallback(const nav_msgs::Odometry::ConstPtr& msg);
 void cmdTimerCallback(const ros::TimerEvent&);
 void refPoseCallback(const geometry_msgs::PoseStamped::ConstPtr& msg);
 
 #endif
+

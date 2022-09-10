@@ -16,6 +16,8 @@
 #include <geographic_msgs/GeoPoseStamped.h>
 #include <sensor_msgs/NavSatFix.h>
 
+#include <offboard/traj_gen.h>
+
 #include <Eigen/Dense>
 
 #include <iostream>
@@ -23,15 +25,13 @@
 #include <cstdio>
 #include <vector>
 
-#include <offboard/traj_gen.h>
-#include <offboard/ivsr_log.h>
-
 class OffboardControl {
-  public:
+ public:
 	// OffboardControl();
 	OffboardControl(const ros::NodeHandle &nh, const ros::NodeHandle &nh_private, bool input_setpoint);
 	~OffboardControl();
-  private:
+
+ private:
 	/* CONSTANT */
 	const double PI = 3.141592653589793238463;  // PI
 	const double eR = 6378.137;         // earth radius in km

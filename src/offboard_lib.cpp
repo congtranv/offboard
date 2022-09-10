@@ -1,16 +1,17 @@
 #include "offboard/offboard.h"
+#include "offboard/ivsr_log.h"
 
 /* uncomment for enable using Trajectory generation */
-// #define USE_TRAJ_GEN;
+// #define USE_TRAJ_GEN
 
 /* uncomment for enable using yaw input when manage input for ENU setpoint flight mode */
-// #define USE_YAW_SETPOINT;
+// #define USE_YAW_SETPOINT
 
 /* uncomment for enable using check error value by GPS (LLA) when perform flight with GPS (LLA) setpoints */
-#define USE_CHECK_GPS;
+#define USE_CHECK_GPS
 
 /* uncomment for enable using yaw control when perform flight with ENU (x,y,z) setpoints from optimization planner */
-#define USE_YAW_CONTROL;
+#define USE_YAW_CONTROL
 
 OffboardControl::OffboardControl(const ros::NodeHandle &nh, const ros::NodeHandle &nh_private, bool input_setpoint):
   nh_(nh),
@@ -60,7 +61,6 @@ OffboardControl::OffboardControl(const ros::NodeHandle &nh, const ros::NodeHandl
 
 OffboardControl::~OffboardControl() {
     /* destructor */
-    IVSR_LOGI("Shuting down OFFBORAD node...");
 }
 
 /* wait for connect, GPS received, ...
@@ -893,9 +893,9 @@ void OffboardControl::plannerFlight() {
 }
 #endif
 
-#ifdef 0
 /* perform flight with ENU (x,y,z) setpoints from optimization planner 
   testing with mav_trajectory_generation */
+/*
 void OffboardControl::plannerFlight() {
     const bool oneshot = false;
     const bool autostart = false;
@@ -1024,7 +1024,7 @@ void OffboardControl::plannerFlight() {
         IVSR_LOGE("Not received optimization points! Landing");
     }
 }
-#endif
+*/
 
 /* calculate yaw offset between current position and next optimization position */
 double OffboardControl::calculateYawOffset(geometry_msgs::PoseStamped current, geometry_msgs::PoseStamped setpoint) {

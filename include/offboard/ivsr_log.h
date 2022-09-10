@@ -6,8 +6,8 @@ void ivsrLogWarn(const char* format, ...);
 void ivsrLogDebug(const char* format, ...);
 void ivsrLogError(const char* format, ...);
 
-#define IVSR_LOGI(...) ivsrLogInfor(__VA_ARGS__)
-#define IVSR_LOGW(...) ivsrLogInfor(__VA_ARGS__)
+#define IVSR_LOGI(...) ivsrLogInfo(__VA_ARGS__)
+#define IVSR_LOGW(...) ivsrLogWarn(__VA_ARGS__)
 #define IVSR_LOGD(...) ivsrLogDebug(__VA_ARGS__)
 #define IVSR_LOGE(...) ivsrLogError(__VA_ARGS__)
 

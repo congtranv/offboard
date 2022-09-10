@@ -46,9 +46,17 @@ target_link_libraries(offboard_lib
   ${catkin_LIBRARIES}
 )
 
+add_library(ivsr_log
+  src/ivsr_log.cpp
+)
+target_link_libraries(ivsr_log
+  ${catkin_LIBRARIES}
+)
+
 add_executable(offboard_node src/offboard_node.cpp)
 target_link_libraries(offboard_node
   offboard_lib
+  ivsr_log
 )
 
 add_executable(setmode_offb src/setmode_offb.cpp)

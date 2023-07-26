@@ -410,7 +410,7 @@ void OffboardControl::enuFlight() {
                                                     current_odom_.pose.pose.position.y,
                                                     current_odom_.pose.pose.position.z),
                                     setpoint);
-        IVSR_LOGI("Distance to target: %.1f (m)", distance_);
+        IVSR_LOGP("Distance to target: %.1f (m)", distance_);
 
         bool target_reached = checkPositionError(target_error_, setpoint);
 
@@ -541,7 +541,7 @@ void OffboardControl::gpsFlight() {
                                                     current_odom_.pose.pose.position.y,
                                                     current_odom_.pose.pose.position.z),
                                     setpoint);
-        IVSR_LOGI("Distance to goal: %.1f (m)", distance_);
+        IVSR_LOGP("Distance to goal: %.1f (m)", distance_);
 
         bool goal_reached = checkGPSError(goal_error_,
                                             goalTransfer(ENUToWGS84(current_odom_.pose.pose.position, ref_gps_position_).latitude,
@@ -628,7 +628,7 @@ void OffboardControl::gpsFlight() {
                                                     current_odom_.pose.pose.position.y,
                                                     current_odom_.pose.pose.position.z),
                                     setpoint);
-        IVSR_LOGI("Distance to goal: %.1f (m)", distance_);
+        IVSR_LOGP("Distance to goal: %.1f (m)", distance_);
 
         bool goal_reached = checkPositionError(goal_error_, setpoint);
 

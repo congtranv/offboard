@@ -39,3 +39,14 @@ void ivsrLogError(const char* format, ...) {
     va_end(arg_ptr);
     std::printf("[ ERROR] %s \n", msg);
 }
+
+void ivsrLogProgress(const char* format, ...) {
+    char msg[100];
+    va_list arg_ptr;
+    va_start(arg_ptr, format);
+    vsprintf(msg, format, arg_ptr);
+    va_end(arg_ptr);
+    std::printf("[ INFO] %s \r", msg);
+    usleep(80000);
+    std::cout.flush();
+}
